@@ -67,7 +67,10 @@ MAP_PORT=8080  # arbitrary
 OA2P_PORT=18080  # arbitrary
 
 # Run locally WITHOUT oauth2_proxy (dev only — auth is bypassed):
-oauth2-proxy --banner - --cookie-secret=secret_for_demo~ --cookie-refresh=1h --show-debug-on-error --provider=google --client-id="${oauth_client_id?}" --client-secret="${oauth_client_secret?}" --email-domain=\* --upstream=http://localhost:$MAP_PORT/ --http-address=localhost:$OA2P_PORT
+oauth2-proxy --banner - --cookie-secret=secret_for_demo~ --cookie-refresh=1h --show-debug-on-error --provider=google --client-id="${oauth_client_id?}" --client-secret="${oauth_client_secret?}" --email-domain=\* --upstream=http://localhost:${MAP_PORT?}/ --http-address=localhost:${OA2P_PORT?}
+
+# or, better,
+oauth2-proxy --banner '<a href="/public-help.html">Pirate Map</a>' --custom-sign-in-logo=https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Flag_of_Edward_England.svg/960px-Flag_of_Edward_England.svg.png --footer - --cookie-secret=secret_for_demo~ --cookie-refresh=1h --show-debug-on-error --provider=google --client-id="${oauth_client_id?}" --client-secret="${oauth_client_secret?}" --email-domain=\* --skip-auth-route='/public-help.html' --upstream=http://localhost:${MAP_PORT?}/ --http-address=localhost:${OA2P_PORT?}
 
 env DB_PATH="`pwd`/sightingmap.db" ADDR=":$MAP_PORT" go run ./cmd/server 
 

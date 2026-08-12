@@ -369,3 +369,7 @@ body {
 label.horizontal {
   margin-right: 1em;
 }
+
+a.subtle {
+  text-decoration: none;
+}

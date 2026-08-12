@@ -42,9 +42,14 @@ func DefaultConfig() Config {
 func Middleware(st *store.Store, cfg Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if strings.HasPrefix(r.URL.Path, "/public-") {
+				next.ServeHTTP(w, r.WithContext(r.Context()))
+				return
+			}
+
 			subject := extractSubject(r, cfg)
 			if subject == "" {
-				http.Error(w, "unauthenticated: missing oauth2_proxy identity header", http.StatusUnauthorized)
+				http.Error(w, "unauthenticated: missing identity header", http.StatusUnauthorized)
 				return
 			}
 			u, err := st.ResolveUser(subject)
