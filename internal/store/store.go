@@ -180,23 +180,21 @@ type SightingInput struct {
 
 // InsertSighting appends a new sighting.
 func (s *Store) InsertSighting(ctx context.Context, in SightingInput) (int64, error) {
-	if in.LocationID == nil {
-		_, err := s.db.ExecContext(ctx, `
+	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO locations
 		(created_by, lat, lon, created_at)
 		select $1, $2, $3, $4 where not exists
 		(select 1 from locations where lat=$2 and lon=$3)`, in.UserID, in.Lat, in.Lon, in.ObservedAt.UTC().Format(time.RFC3339))
-		if err != nil {
-			return 0, err
-		}
+	if err != nil {
+		return 0, err
 	}
 
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO sightings
 		(reporter_id, observed_at, to_exist, medium, message, height, description, location_id)
-		values ($1, $2, case when $3 then 1 else 0 end, $4, $5, $6, $7, $8)`,
+		SELECT $1, $2, case when $3 then 1 else 0 end, $4, $5, $6, $7, locations.id FROM locations WHERE lat=$8 AND lon=$9 LIMIT 1`,
 		in.UserID, in.ObservedAt.UTC().Format(time.RFC3339), in.ToExist,
-		in.Medium, in.Message, in.Height, in.Description, in.LocationID,
+		in.Medium, in.Message, in.Height, in.Description,
 		in.Lat, in.Lon,
 	)
 	if err != nil {
