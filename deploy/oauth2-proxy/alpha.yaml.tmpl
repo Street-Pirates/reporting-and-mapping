@@ -1,0 +1,50 @@
+# oauth2-proxy ALPHA config (multi-provider). Rendered from this template with
+# `envsubst` at container start so client secrets stay in .env, never committed.
+#
+# Multi-provider in a single oauth2-proxy instance requires the alpha config and
+# is still marked EXPERIMENTAL upstream: oauth2-proxy shows a provider-chooser
+# sign-in page listing Google and GitHub.
+#
+# Passed to oauth2-proxy via `--alpha-config`. The remaining (classic) options
+# live in oauth2-proxy.cfg (`--config`); secrets come from OAUTH2_PROXY_* env.
+
+upstreamConfig:
+  upstreams:
+    # All traffic proxied to the Go app. `app` is the docker-compose service name.
+    - id: sightingmap
+      path: /
+      uri: http://app:8080
+
+# Identity forwarded to the app. These header names match auth.DefaultConfig()
+# in internal/auth/auth.go (X-Forwarded-Email, then X-Forwarded-User), so the
+# app needs no AUTH_HEADERS override.
+#
+# preserveRequestValue: false => any client-supplied value for these headers is
+# OVERWRITTEN, so a caller cannot spoof their identity by sending the header.
+injectRequestHeaders:
+  - name: X-Forwarded-Email
+    preserveRequestValue: false
+    values:
+      - claimSource: { claim: email }
+  - name: X-Forwarded-User
+    preserveRequestValue: false
+    values:
+      - claimSource: { claim: user }
+  - name: X-Forwarded-Preferred-Username
+    preserveRequestValue: false
+    values:
+      - claimSource: { claim: preferred_username }
+
+providers:
+  - id: google
+    provider: google
+    clientID: "${GOOGLE_CLIENT_ID}"
+    clientSecret: "${GOOGLE_CLIENT_SECRET}"
+    scope: "openid email profile"
+
+# - id: github
+#   provider: github
+#   clientID: "${GITHUB_CLIENT_ID}"
+#   clientSecret: "${GITHUB_CLIENT_SECRET}"
+#   # user:email is required so oauth2-proxy can read the account's email address.
+#   scope: "user:email read:user"

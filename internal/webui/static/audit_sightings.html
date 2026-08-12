@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Map Update Auditing</title>
+  <link rel="stylesheet" href="style.css">
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+  <style>
+    .flag-dialog {
+      position: fixed;
+      inset: 0;
+      z-index: 30;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px;
+      background: rgba(0, 0, 0, 0.35);
+    }
+    .flag-dialog.hidden {
+      display: none;
+    }
+    .flag-dialog-panel {
+      position: relative;
+      width: min(100%, 530px);
+      max-height: 90vh;
+      overflow: auto;
+      background: #fff;
+      color: #111;
+      border-radius: 18px;
+      padding: 20px 20px 16px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+    }
+    .flag-dialog-panel h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+    }
+    .flag-dialog-close {
+      position: absolute;
+      right: 14px;
+      top: 14px;
+      border: none;
+      background: none;
+      color: #666;
+      font-size: 24px;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .flag-dialog-list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      font-size: 14px;
+      color: #333;
+    }
+    .flag-dialog-list li {
+      margin: 10px 0;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #f5f5f5;
+    }
+    .flag-dialog-empty {
+      color: #555;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+    .flag-dialog-footer {
+      margin-top: 16px;
+    }
+    .flag-dialog-note {
+      margin: 8px 0 0;
+      color: #555;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body class="audit-page">
+  <div class="container">
+    <div class="left">
+      <div class="controls">
+        <label class="small">days: <input id="horizon" class="audit-horizon" type="number" min="1" max="180" /></label>
+        <label class="small audit-toggle"><input id="includeInsincere" type="checkbox"/> Include insincere reporters</label>
+        <span class="small" id="count"></span>
+      </div>
+      <div id="list">
+        <div class="loading">Loading events…</div>
+      </div>
+    </div>
+    <div class="right">
+      <div id="map"></div>
+    </div>
+  </div>
+
+  <div id="userFlagDialog" class="flag-dialog hidden" aria-hidden="true">
+    <div class="flag-dialog-panel">
+      <button type="button" class="flag-dialog-close" id="flagDialogClose" aria-label="Close">×</button>
+      <h2>User flags</h2>
+      <p class="flag-dialog-empty" id="flagDialogEmpty">Loading flags…</p>
+      <ul class="flag-dialog-list" id="flagDialogList"></ul>
+      <div class="flag-dialog-footer" id="flagDialogFooter"></div>
+      <p class="flag-dialog-note">Only those with the <code>set-user-flags</code> permission may flag user accounts.</p>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+  <script>
+    // Read horizon_days from URL param `horizon_days` or `horizon`
+    function getParam(name, fallback) {
+      const p = new URLSearchParams(location.search);
+      if (p.has(name)) return p.get(name);
+      if (name === 'horizon_days' && p.has('horizon')) return p.get('horizon');
+      return fallback;
+    }
+
+    const horizonInput = document.getElementById('horizon');
+    const includeInsincereInput = document.getElementById('includeInsincere');
+    const listDiv = document.getElementById('list');
+    const countSpan = document.getElementById('count');
+
+    let horizon = parseInt(getParam('horizon_days', '14'), 10) || 14;
+    horizonInput.value = horizon;
+    const includeInsincereParam = getParam('include_insincere', '');
+    const includeInsincere = includeInsincereParam === '1' || includeInsincereParam === 'true';
+    includeInsincereInput.checked = includeInsincere;
+
+    // MapLibre setup (match project's index.html usage)
+    const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/positron";
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: BASEMAP_STYLE,
+      center: [0,0],
+      zoom: 2
+    });
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-left');
+    map.addControl(
+      new maplibregl.GeolocateControl({ positionOptions: { enableHighAccuracy: true }, trackUserLocation: true }),
+      'top-left'
+    );
+
+    function createDot(color){
+      const el = document.createElement('div');
+      el.style.width = '14px';
+      el.style.height = '14px';
+      el.style.borderRadius = '7px';
+      el.style.background = color;
+      el.style.border = '2px solid #fff';
+      el.style.boxShadow = '0 0 4px rgba(0,0,0,0.3)';
+      el.style.cursor = 'pointer';
+      return el;
+    }
+
+    let markers = new Map(); // id -> { marker, el }
+    let rows = new Map(); // id -> tr
+    let selectedId = null;
+
+    function formatTime(t){
+      const d = new Date(t);
+      if (Number.isNaN(d.getTime())) return String(t || '');
+      return d.toLocaleString();
+    }
+
+    function ageSince(t){
+      const d = new Date(t);
+      if (Number.isNaN(d.getTime())) return '';
+      const sec = Math.round((Date.now() - d.getTime()) / 1000);
+      if (sec < 60) return `${sec}s ago`;
+      const min = Math.round(sec / 60);
+      if (min < 60) return `${min}m ago`;
+      const hr = Math.round(min / 60);
+      if (hr < 24) return `${hr}h ago`;
+      const day = Math.round(hr / 24);
+      if (day < 30) return `${day}d ago`;
+      const mon = Math.round(day / 30);
+      return `${mon}mo ago`;
+    }
+
+    function reporterColor(opaque) {
+      const id = String(opaque || '').replace(/[^0-9a-f]/gi, '').padEnd(6, '0');
+      let r = 0, g = 0, b = 0;
+      if (id.length >= 6) {
+        const rgb = parseInt(id.slice(0, 6), 16);
+        r = ((rgb >> 16) & 0xff) & 0x7f;
+        g = ((rgb >> 8) & 0xff) & 0x7f;
+        b = (rgb & 0xff) & 0x7f;
+      } else {
+        let hash = 0;
+        for (let i = 0; i < id.length; i++) {
+          hash = ((hash * 31) + id.charCodeAt(i)) >>> 0;
+        }
+        r = (hash >> 0) & 0x7f;
+        g = (hash >> 7) & 0x7f;
+        b = (hash >> 14) & 0x7f;
+      }
+      return `rgb(${r + 48}, ${g + 48}, ${b + 48})`;
+    }
+
+    function reporterLabel(opaque) {
+      return String(opaque || '').slice(0, 7);
+    }
+
+    function clearList(){
+      listDiv.innerHTML = '';
+      markers.forEach(({marker})=> marker.remove());
+      markers.clear(); rows.clear();
+    }
+
+    function toggleSelect(id){
+      if (selectedId === id) { setSelected(null); return; }
+      setSelected(id);
+    }
+
+    function setSelected(id){
+      if (selectedId && markers.has(selectedId)){
+        const rec = markers.get(selectedId);
+        rec.el.style.background = '#3388ff';
+        const r = rows.get(selectedId); if (r) r.classList.remove('selected');
+      }
+      selectedId = id;
+      if (selectedId && markers.has(selectedId)){
+        const rec = markers.get(selectedId);
+        rec.el.style.background = '#ff3333';
+        const r = rows.get(selectedId);
+        if (r) { r.classList.add('selected'); r.scrollIntoView({behavior:'smooth', block:'center'}); }
+        map.easeTo({ center: rec.marker.getLngLat(), zoom: Math.max(map.getZoom(), 10) });
+      }
+    }
+
+    async function loadEvents(){
+      listDiv.innerHTML = '<div class="loading">Loading events…</div>';
+      const includeInsincere = includeInsincereInput.checked;
+      const url = `/api/events?horizon_days=${encodeURIComponent(horizon)}${includeInsincere ? '&include_insincere=1' : ''}`;
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(res.status + ' ' + res.statusText);
+        const data = await res.json();
+        renderList(data || []);
+      } catch (err){
+        listDiv.innerHTML = '<div class="loading">Error loading events: ' + String(err) + '</div>';
+      }
+    }
+
+    function renderList(items){
+      clearList();
+      countSpan.textContent = items.length + ' results';
+      const tbl = document.createElement('table');
+      const thead = document.createElement('thead');
+      thead.innerHTML = '<tr><th>Reporter</th><th>Change</th><th>When</th><th>Age</th></tr>';
+      tbl.appendChild(thead);
+      const tbody = document.createElement('tbody');
+      const bounds = new maplibregl.LngLatBounds();
+      items.forEach(item=>{
+        const eventID = item.event_id ?? item.sighting_id ?? item.id ?? item._id ?? item.uuid ?? Math.random().toString(36).slice(2);
+        const eventType = item.event_type ?? 'sighting';
+        const key = `${eventType}-${eventID}`;
+        const reporter = item.author_opaque_id ?? item.author ?? item.opaque_id ?? '';
+        const shortReporter = reporterLabel(reporter);
+        const reporterColorValue = reporterColor(reporter);
+        const observed = item.timestamp ?? item.observed_at ?? item.observedAt ?? item.time ?? item.timestamp;
+        const when = formatTime(observed);
+        const age = ageSince(observed);
+        const insincerity = item.author_insincerity > 0 ? "insincere" : "";
+        const description = item.description ? String(item.description) : '';
+        const locationHint = item.location_id ? `location ${item.location_id}` : '';
+        const lat = item.lat ?? item.latitude ?? (item.location && item.location.lat);
+        const lon = item.lon ?? item.longitude ?? (item.location && item.location.lon);
+        const haveCoords = lat != null && lon != null && !isNaN(lat) && !isNaN(lon);
+        const latlonText = haveCoords ? `lat ${Number(lat).toFixed(5)}, lon ${Number(lon).toFixed(5)}` : '';
+        let changeText;
+        let detailText = '';
+        if (eventType === 'location_created') {
+          changeText = 'New location!';
+          detailText = `location ${eventID}`;
+        } else {
+          const toExist = item.to_exist === true || item.to_exist === 'true' || item.to_exist === 1;
+          changeText = toExist ? 'Observed present' : 'Observed missing';
+          const detailParts = [];
+          if (description) detailParts.push(description);
+          if (locationHint) detailParts.push(locationHint);
+          detailText = detailParts.join(' · ');
+        }
+
+        const tr = document.createElement('tr');
+        tr.style.cursor = 'pointer';
+        tr.addEventListener('click', ()=> toggleSelect(key));
+
+        const reporterTd = document.createElement('td');
+        const reputation = document.createElement('span')
+        reputation.className = 'reputation-pill';
+        const pill = document.createElement('span');
+        pill.className = 'reporter-pill';
+        pill.style.background = reporterColorValue;
+        pill.textContent = shortReporter;
+        attachReporterClick(pill, reporter);
+        reputation.append(pill);
+        if (insincerity != "") {
+          reputation.append(document.createTextNode(insincerity))
+        }
+        reporterTd.append(reputation);
+
+        const changeTd = document.createElement('td');
+        const main = document.createElement('div');
+        main.textContent = changeText + (detailText ? ` · ${detailText}` : '');
+        const secondary = document.createElement('div');
+        secondary.className = 'row-secondary';
+        secondary.textContent = latlonText;
+        changeTd.append(main, secondary);
+
+        const whenTd = document.createElement('td');
+        whenTd.textContent = when;
+        const ageTd = document.createElement('td');
+        ageTd.textContent = age;
+
+        tr.append(reporterTd, changeTd, whenTd, ageTd);
+        tbody.appendChild(tr);
+        rows.set(key, tr);
+
+        if (haveCoords){
+          const el = createDot(reporterColorValue);
+          const marker = new maplibregl.Marker({ element: el }).setLngLat([Number(lon), Number(lat)]).addTo(map);
+          el.addEventListener('click', (e)=>{ e.stopPropagation(); toggleSelect(key); });
+          markers.set(key, { marker, el });
+          bounds.extend([Number(lon), Number(lat)]);
+        }
+      });
+      tbl.appendChild(tbody);
+      listDiv.innerHTML = '';
+      listDiv.appendChild(tbl);
+      if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 40 });
+    }
+
+    includeInsincereInput.addEventListener('change', ()=>{
+      const p = new URLSearchParams(location.search);
+      if (includeInsincereInput.checked) p.set('include_insincere', '1'); else p.delete('include_insincere');
+      history.replaceState({}, '', location.pathname + (p.toString() ? '?' + p.toString() : ''));
+      loadEvents();
+    });
+
+    horizonInput.addEventListener('change', ()=>{
+      const p = new URLSearchParams(location.search);
+      p.set('horizon', horizonInput.value);
+      history.replaceState({}, '', location.pathname + (p.toString() ? '?' + p.toString() : ''));
+      loadEvents();
+    });
+
+    const flagDialog = document.getElementById('userFlagDialog');
+    const flagDialogClose = document.getElementById('flagDialogClose');
+    const flagDialogEmpty = document.getElementById('flagDialogEmpty');
+    const flagDialogList = document.getElementById('flagDialogList');
+    const flagDialogFooter = document.getElementById('flagDialogFooter');
+    let currentFlagTarget = null;
+
+    function showFlagDialog(opaque) {
+      currentFlagTarget = opaque;
+      flagDialog.classList.remove('hidden');
+      flagDialog.setAttribute('aria-hidden', 'false');
+      flagDialogEmpty.textContent = 'Loading flags…';
+      flagDialogList.innerHTML = '';
+      flagDialogFooter.innerHTML = '';
+      fetch(`/api/users/${encodeURIComponent(opaque)}/flags`)
+        .then(async (res) => {
+          if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(err?.error || `${res.status} ${res.statusText}`);
+          }
+          return res.json();
+        })
+        .then((data) => {
+          const flags = Array.isArray(data.flags) ? data.flags : [];
+          renderFlagDialog(opaque, flags);
+        })
+        .catch((err) => {
+          flagDialogEmpty.textContent = 'Failed to load flags: ' + String(err);
+        });
+    }
+
+    function hideFlagDialog() {
+      flagDialog.classList.add('hidden');
+      flagDialog.setAttribute('aria-hidden', 'true');
+      currentFlagTarget = null;
+    }
+
+    flagDialogClose.addEventListener('click', hideFlagDialog);
+    flagDialog.addEventListener('click', (event) => {
+      if (event.target === flagDialog) {
+        hideFlagDialog();
+      }
+    });
+
+    function renderFlagDialog(opaque, flags) {
+      flagDialogList.innerHTML = '';
+      const currentInsincere = flags.find((f) => f.flag_type === 'insincere')?.value === 1;
+      if (flags.length === 0) {
+        flagDialogEmpty.textContent = 'No existing flags for this user.';
+      } else {
+        flagDialogEmpty.textContent = '';
+        for (const flag of flags) {
+          const li = document.createElement('li');
+          const actor = esc(flag.flagged_by_opaque_id.substring(0, 8));
+          li.innerHTML = `Marked as <strong>${flag.value == 1 ? esc(flag.flag_type) : ("not " + esc(flag.flag_type))}</strong> by ${actor} on ${esc(flag.created_at)}`;
+          flagDialogList.appendChild(li);
+        }
+      }
+      const actionButton = document.createElement('button');
+      actionButton.className = 'btn primary';
+      actionButton.textContent = currentInsincere ? 'Clear insincere flag' : 'Mark insincere';
+      actionButton.type = 'button';
+      actionButton.addEventListener('click', () => {
+        applyInsincereFlag(opaque, currentInsincere ? 0 : 1);
+        hideFlagDialog();
+        loadEvents();
+      });
+      flagDialogFooter.innerHTML = '';
+      flagDialogFooter.appendChild(actionButton);
+    }
+
+    function applyInsincereFlag(opaque, value) {
+      flagDialogEmpty.textContent = 'Saving flag…';
+      flagDialogList.innerHTML = '';
+      flagDialogFooter.innerHTML = '';
+      fetch(`/api/users/${encodeURIComponent(opaque)}/flags`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ flag_type: 'insincere', value }),
+      })
+        .then(async (res) => {
+          if (!res.ok) {
+            const err = await res.json().catch(() => null);
+            throw new Error(err?.error || `${res.status} ${res.statusText}`);
+          }
+          return res.json();
+        })
+        .then(() => {
+          hideFlagDialog();
+        })
+        .catch((err) => {
+          flagDialogEmpty.textContent = 'Unable to save flag: ' + String(err);
+        });
+    }
+
+    function attachReporterClick(reputation, opaque) {
+      reputation.addEventListener('click', (event) => {
+        event.stopPropagation();
+        showFlagDialog(opaque);
+      });
+    }
+
+    function esc(s) { return String(s || "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+    loadEvents();
+  </script>
+</body>
+</html>

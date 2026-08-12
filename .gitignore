@@ -1,0 +1,5 @@
+**/sightingmap.db
+**/sightingmap.db-*
+cmd/*/__debug_bin*
+.vscode
+*.sw?
