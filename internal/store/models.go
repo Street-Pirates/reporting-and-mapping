@@ -94,6 +94,7 @@ type AuditEvent struct {
 	Lon               float64 `json:"lon"`
 	Timestamp         string  `json:"timestamp"`
 	ToExist           *bool   `json:"to_exist,omitempty"`
+	Transpired        *string `json:"transpired"`
 	Description       *string `json:"description,omitempty"`
 	Medium            *string `json:"medium,omitempty"`
 	Message           *string `json:"message,omitempty"`

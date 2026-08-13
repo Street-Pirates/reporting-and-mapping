@@ -491,12 +491,14 @@ function locationSheet(loc) {
     <p>Currently ${status} · ${loc.sighting_count} report(s) in time window</p>
     <p><tt>${Number(loc.lat).toFixed(5)}, ${Number(loc.lon).toFixed(5)}</tt>&emsp;${streetViewLink(loc.lat, loc.lon)}</p>
     <button class="btn seen"   id="still">Still exists</button>
-    <button class="btn gone"   id="gone">No longer exists</button>
-    <!-- button disabled=disabled class="btn"        id="adjust">Propose movement</button -->
+    <button class="btn gone"   id="gone">Was no longer there</button>
+    <button class="btn gone"   id="nixed">Found and removed</button>
+    <!-- button disabled=disabled class="btn"        id="adjust">Propose movement</button-->
     <button class="btn"        id="hist">View history</button>
   `);
-  document.getElementById("still").onclick = () => report(loc.location_id, true);
-  document.getElementById("gone").onclick = () => report(loc.location_id, false);
+  document.getElementById("still").onclick = () => reportOnExistingLocation(loc.location_id, "seen");
+  document.getElementById("gone").onclick = () => reportOnExistingLocation(loc.location_id, "missed");
+  document.getElementById("nixed").onclick = () => reportOnExistingLocation(loc.location_id, "removed");
   //document.getElementById("adjust").onclick = () => {
   //  if (!canAddAtCurrentZoom()) return;
   //  adjustFor = loc.location_id; closeSheet();
@@ -529,17 +531,26 @@ function proposedSheet(p) {
 
 // continued_existence / non_existence report against a location,
 // reusing the location's own coordinates.
-async function report(locationId, to_exist) {
-  if (!canAddAtCurrentZoom()) return;
-  const coords = locationCoords[locationId] || [0, 0];
+async function reportOnExistingLocation(locationId, transpired) {
+  const coords = locationCoords[locationId];
+  if (coords === undefined) {
+    console.error("Could not look up cached location of loc", locationId);
+    return;
+  }
+
   try {
+    console.debug("Reporting that loc", locationId, "at", coords, "is", transpired);
     await api("POST", "/api/sightings", {
       lat: coords[0], lon: coords[1],
-      to_exist: to_exist,
+      transpired: transpired,
       ...locationRef(locationId),
     });
-    closeSheet(); toast("Report submitted"); refreshMap();
-  } catch (err) { toast(err.message); }
+    closeSheet();
+    toast("Report submitted");
+    refreshMap();
+  } catch (err) {
+    toast(err.message);
+  }
 }
 
 // "Propose movement": append a continued_existence at the tapped point.

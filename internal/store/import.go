@@ -105,12 +105,12 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 			return stats, fmt.Errorf("insert location %s: %w", rec.ExternalID, err)
 		}
 
-		var existingInt int
+		var transpired string
 		switch {
 		case rec.Exists:
-			existingInt = 1 // first time we record this sign
+			transpired = "seen" // first time we record this sign
 		default:
-			existingInt = 0 // reported gone
+			transpired = "unknown" // reported gone
 		}
 
 		description := titleDescription.ReplaceAllString(rec.Description, "$1")
@@ -126,12 +126,12 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO sightings
-			  (reporter_id, location_id, observed_at, to_exist, image_url, medium, message, description, external_id)
+			  (reporter_id, location_id, observed_at, transpired, image_url, medium, message, description, external_id)
 			SELECT $1, loc.id, $2, $3, $4, $5, $6, $7, $8
 			FROM locations loc
 			WHERE lat BETWEEN $9-0.000045 AND $9+0.000045 AND lon BETWEEN $10-0.000045 AND $10+0.000045
 			LIMIT 1`,
-			importerUserID, observation_time, existingInt, image_url, rec.Medium, rec.Message, description, rec.ExternalID,
+			importerUserID, observation_time, transpired, image_url, rec.Medium, rec.Message, description, rec.ExternalID,
 			rec.Lat, rec.Lon,
 		)
 		if err != nil {

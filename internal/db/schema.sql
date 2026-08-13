@@ -90,6 +90,7 @@ CREATE TABLE IF NOT EXISTS sightings (
   reporter_id  INTEGER NOT NULL REFERENCES users(id),
   location_id  INTEGER NOT NULL REFERENCES locations(id),
   observed_at  TEXT    NOT NULL DEFAULT '2010-01-01T15:00:00.000Z',
+  transpired   TEXT    NOT NULL,
   to_exist     INTEGER NOT NULL DEFAULT 1,
   image_url    TEXT    NULL,
   medium       TEXT    NOT NULL DEFAULT 'unknown',

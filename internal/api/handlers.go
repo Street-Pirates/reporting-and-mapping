@@ -50,6 +50,7 @@ func (s *Server) handleCreateSighting(w http.ResponseWriter, r *http.Request) {
 		Lon                 float64 `json:"lon"`
 		ObservedAt          string  `json:"observed_at"`
 		ToExist             bool    `json:"to_exist"`
+		Transpired          string  `json:"transpired"`
 		Medium              string  `json:"medium"`
 		Message             string  `json:"message"`
 		Height              string  `json:"height"`
@@ -73,6 +74,12 @@ func (s *Server) handleCreateSighting(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.Message == "" {
 		body.Message = "unknown"
+	}
+	switch body.Transpired {
+	case "seen", "missed", "removed":
+	default:
+		writeErr(w, http.StatusBadRequest, "invalid transpired event, expecting seen, missed, or removed")
+		return
 	}
 	switch body.Message {
 	case "unknown", "js", "jicr", "bij", "other":
@@ -111,6 +118,7 @@ func (s *Server) handleCreateSighting(w http.ResponseWriter, r *http.Request) {
 		Lon:        body.Lon,
 		ObservedAt: observed,
 		ToExist:    body.ToExist,
+		Transpired: body.Transpired,
 		Medium:     body.Medium,
 		Message:    body.Message,
 		Height:     body.Height,

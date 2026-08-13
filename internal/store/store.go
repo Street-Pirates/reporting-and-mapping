@@ -170,6 +170,7 @@ type SightingInput struct {
 	UserID      int64
 	Lat, Lon    float64
 	ObservedAt  time.Time
+	Transpired  string
 	ToExist     bool
 	Medium      string
 	Message     string
@@ -189,11 +190,21 @@ func (s *Store) InsertSighting(ctx context.Context, in SightingInput) (int64, er
 		return 0, err
 	}
 
+	var toExist int
+	switch in.Transpired {
+	case "seen":
+		toExist = 1
+	case "missed", "removed":
+		toExist = 0
+	default:
+		return 0, errors.New("Not sent what transpired at sighting")
+	}
+
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO sightings
-		(reporter_id, observed_at, to_exist, medium, message, height, description, location_id)
-		SELECT $1, $2, case when $3 then 1 else 0 end, $4, $5, $6, $7, locations.id FROM locations WHERE lat=$8 AND lon=$9 LIMIT 1`,
-		in.UserID, in.ObservedAt.UTC().Format(time.RFC3339), in.ToExist,
+		(reporter_id, observed_at, to_exist, transpired, medium, message, height, description, location_id)
+		SELECT $1, $2, case when $3 then 1 else 0 end, $4, $5, $6, $7, $8, locations.id FROM locations WHERE lat=$9 AND lon=$10 LIMIT 1`,
+		in.UserID, in.ObservedAt.UTC().Format(time.RFC3339), toExist, in.Transpired,
 		in.Medium, in.Message, in.Height, in.Description,
 		in.Lat, in.Lon,
 	)
