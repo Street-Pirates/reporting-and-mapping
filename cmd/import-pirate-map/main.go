@@ -247,6 +247,9 @@ func mediumForDescription(description string) string {
 	if strings.Contains(strings.ToLower(description), "sticker") {
 		return "sticker"
 	}
+	if strings.Contains(strings.ToLower(description), "barnacle") {
+		return "sticker"
+	}
 	return "placard"
 }
 
