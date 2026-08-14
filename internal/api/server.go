@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"sightingmap/internal/geo"
@@ -64,7 +65,13 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("GET /ping", s.handlePing)
 
 	// Static frontend.
-	mux.Handle("/", http.FileServer(http.FS(s.static)))
+	fileServeHandler := http.FileServer(http.FS(s.static))
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.URL.Path, ".") && !strings.HasSuffix(r.URL.Path, "/") {
+			r.URL.Path = r.URL.Path + ".html"
+		}
+		fileServeHandler.ServeHTTP(w, r)
+	})
 	return mux
 }
 
