@@ -60,6 +60,8 @@ func main() {
 
 	srv := api.New(st, webui.FS())
 	handler := auth.Middleware(st, authCfg)(srv.Routes())
+	handler = api.PanicRecoveryMiddleware(handler)
+	handler = api.RequestLoggingMiddleware(handler)
 
 	httpSrv := &http.Server{
 		Addr:              addr,
