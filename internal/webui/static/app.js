@@ -98,9 +98,13 @@ function emphasizeRoads() {
   if (!style || !style.layers) return;
   for (const layer of style.layers) {
     if (layer.type !== "line" || layer["source-layer"] !== "transportation") continue;
-    if (/rail|pier|path|ferry/.test(layer.id)) continue; // leave non-roads as-is
+    if (/rail|pier|path|ferry/.test(layer.id)) {
+      continue; // leave non-roads as-is
+    }
     const c = map.getPaintProperty(layer.id, "line-color");
-    if (c !== undefined) map.setPaintProperty(layer.id, "line-color", darken(c, ROAD_DARKEN));
+    if (c !== undefined) {
+      map.setPaintProperty(layer.id, "line-color", darken(c, ROAD_DARKEN));
+    }
   }
 }
 map.on("load", emphasizeRoads);
@@ -126,7 +130,9 @@ const MISSING_MIN_ZOOM = 11;
 const MIN_ADD_ZOOM = 18.0;
 
 function canAddAtCurrentZoom() {
-  if (map.getZoom() >= MIN_ADD_ZOOM) return true;
+  if (map.getZoom() >= MIN_ADD_ZOOM) {
+    return true;
+  }
   toast("Please zoom in and set a location more precisely.");
   return false;
 }
@@ -159,8 +165,13 @@ function daysToSlider(days) {
   return Math.max(0, Math.min(1000, Math.round(t)));
 }
 function fmtDays(d) {
-  if (d >= 365) { const y = (d / 365).toFixed(d % 365 ? 1 : 0); return `${y} yr`; }
-  if (d >= 60) return `${Math.round(d / 30)} mo`;
+  if (d >= 365) {
+    const y = (d / 365).toFixed(d % 365 ? 1 : 0);
+    return `${y} yr`;
+  }
+  if (d >= 60) {
+    return `${Math.round(d / 30)} mo`;
+  }
   return `${d} days`;
 }
 function currentDays() { return sliderToDays(Number(slider.value)); }
@@ -207,11 +218,18 @@ function applyInitialSelection() {
 // --- tiny helpers ----------------------------------------------------------
 async function api(method, path, body) {
   const opts = { method, headers: {} };
-  if (body !== undefined) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+  if (body !== undefined) {
+    opts.headers["Content-Type"] = "application/json";
+    opts.body = JSON.stringify(body);
+  }
   const res = await fetch(path, opts);
   let data = null;
-  try { data = await res.json(); } catch (_) {}
-  if (!res.ok) throw new Error((data && data.error) || `${res.status} ${res.statusText}`);
+  try {
+    data = await res.json();
+  } catch (_) { }
+  if (!res.ok) {
+    throw new Error((data && data.error) || `${res.status} ${res.statusText}`);
+  }
   return data;
 }
 
@@ -232,7 +250,9 @@ document.querySelector(".sheet-close").addEventListener("click", closeSheet);
 
 // Escape dismisses the open sheet, matching the close (×) button.
 document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape" && sheetOpen()) { closeSheet(); }
+  if (e.key === "Escape" && sheetOpen()) {
+    closeSheet();
+  }
 });
 
 function el(html) { const d = document.createElement("div"); d.innerHTML = html.trim(); return d.firstChild; }
@@ -269,7 +289,10 @@ function addMarker(lon, lat, cls, onClick) {
 // Candidate markers highlight the nearby existing reports offered as choices
 // when proposing a new report. They live in their own layer so refreshMap's
 // clearMarkers() leaves them alone; closeSheet() disposes of them.
-function clearCandidateMarkers() { candidateMarkers.forEach((m) => m.remove()); candidateMarkers = []; }
+function clearCandidateMarkers() {
+  candidateMarkers.forEach((m) => m.remove());
+  candidateMarkers = [];
+}
 function showCandidateMarkers(near) {
   clearCandidateMarkers();
   near.forEach((n) => {
@@ -299,8 +322,13 @@ async function refreshMap() {
   params.set("min_lat", String(bb.minLat));
   params.set("max_lat", String(bb.maxLat));
   let data;
-  try { data = await api("GET", `/api/map?${params}`); }
-  catch (e) { toast("Couldn't fetch pins. " + e.message); return; }
+  try {
+    data = await api("GET", `/api/map?${params}`);
+  } catch (e) {
+    console.error("Couldn't fetch pins.", e);
+    toast("Couldn't fetch pins. " + e.message);
+    return;
+  }
 
   clearMarkers();
   lastLocation = {};
@@ -327,7 +355,10 @@ async function refreshMap() {
 // Tap empty map -> report a new sign (or place an adjustment).
 map.on("click", (e) => {
   if (!canAddAtCurrentZoom()) return;
-  if (adjustFor !== null) { relocate(e.lngLat); return; }
+  if (adjustFor !== null) {
+    relocate(e.lngLat);
+    return;
+  }
   newSignSheet(e.lngLat);
 });
 
@@ -349,9 +380,16 @@ map.on("moveend", () => {
 async function newSignSheet(lngLat) {
   if (!canAddAtCurrentZoom()) return;
   let near = [];
-  try { near = await nearbyReports(lngLat); }
-  catch (e) { toast("Couldn't fetch nearby pins. " + e.message); } // fall through to a new report
-  if (near.length === 0) { newSignForm(lngLat); return; }
+  try {
+    near = await nearbyReports(lngLat);
+  } catch (e) {
+    console.error("Couldn't fetch nearby pins.", e);
+    toast("Couldn't fetch nearby pins. " + e.message);
+  } // fall through to a new report
+  if (near.length === 0) {
+    newSignForm(lngLat);
+    return;
+  }
   nearbyChoiceSheet(lngLat, near);
 }
 
@@ -421,8 +459,13 @@ async function reportExisting(near) {
     : { lat: near.lat, lon: near.lon, to_exist: true };
   try {
     await api("POST", "/api/sightings", body);
-    closeSheet(); toast("Received! A moderator may need to review it."); refreshMap();
-  } catch (err) { toast(err.message); }
+    closeSheet();
+    toast("Received! A moderator may need to review it.");
+    refreshMap();
+  } catch (err) {
+    console.error("Couldn't send sighting.", err);
+    toast(err.message);
+  }
 }
 
 // newSignForm is the original "report a brand-new location here" form.
@@ -472,15 +515,25 @@ function newSignForm(lngLat) {
     if (!canAddAtCurrentZoom()) return;
     try {
       await api("POST", "/api/sightings", buildBody(true));
-      closeSheet(); toast("Reported. Thanks!"); refreshMap();
-    } catch (err) { toast(err.message); }
+      closeSheet();
+      toast("Reported. Thanks!");
+      refreshMap();
+    } catch (err) {
+      console.error("Error reporting sighting.", err);
+      toast(err.message);
+    }
   };
   document.getElementById("removed").onclick = async () => {
     if (!canAddAtCurrentZoom()) return;
     try {
       await api("POST", "/api/sightings", buildBody(false));
-      closeSheet(); toast("Received! Thanks! A moderator may need to review it."); refreshMap();
-    } catch (err) { toast(err.message); }
+      closeSheet();
+      toast("Received! Thanks! A moderator may need to review it.");
+      refreshMap();
+    } catch (err) {
+      console.error("Error reporting sighting.", err);
+      toast(err.message);
+    }
   };
 }
 
@@ -522,8 +575,13 @@ function proposedSheet(p) {
     try {
       const loc = await api("POST", "/api/locations", { lat: p.lat, lon: p.lon, description: p.description });
       await api("POST", "/api/reconciliations", { sighting_id: p.id, ...locationRef(loc.location_id) });
-      closeSheet(); toast("Received! Thanks! A moderator may need to review it."); refreshMap();
-    } catch (err) { toast(err.message); }
+      closeSheet();
+      toast("Received! Thanks! A moderator may need to review it.");
+      refreshMap();
+    } catch (err) {
+      console.error("Error sending reconsiliations.", err);
+      toast(err.message);
+    }
   };
   currentSelection = "p" + p.id;
   syncURL();
@@ -556,7 +614,8 @@ async function reportOnExistingLocation(locationId, transpired) {
 // "Propose movement": append a continued_existence at the tapped point.
 async function relocate(lngLat) {
   if (!canAddAtCurrentZoom()) return;
-  const id = adjustFor; adjustFor = null;
+  const id = adjustFor;
+  adjustFor = null;
   try {
     await api("POST", "/api/sightings", {
       lat: lngLat.lat, lon: lngLat.lng,
@@ -564,13 +623,19 @@ async function relocate(lngLat) {
       ...locationRef(id),
 
     });
-    toast("Location adjustment reported"); refreshMap();
-  } catch (err) { toast(err.message); }
+    toast("Location adjustment reported");
+    refreshMap();
+  } catch (err) {
+    toast(err.message);
+  }
 }
 
 async function showHistory(id) {
   const params = new URLSearchParams({ days: String(currentDays()) });
-  if (insincereBox.checked) params.set("include_insincere", "1");
+  if (insincereBox.checked) {
+    params.set("include_insincere", "1");
+  }
+
   try {
     const h = await api("GET", `/api/locations/${id}/history?${params}`);
     const rows = (h.reconciled || []).map((s) =>
@@ -582,7 +647,9 @@ async function showHistory(id) {
       <ul>${rows}</ul>
       <p style="margin-top:8px;color:#888">${near} unreconciled report(s) within 100m</p>
     `);
-  } catch (err) { toast(err.message); }
+  } catch (err) {
+    toast(err.message);
+  }
 }
 
 // --- boot ------------------------------------------------------------------
