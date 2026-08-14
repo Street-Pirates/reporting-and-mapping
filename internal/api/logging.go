@@ -10,6 +10,6 @@ func RequestLoggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		next.ServeHTTP(w, r)
-		log.Printf("%s %q took %dms\n", r.Method, r.RequestURI, time.Now().Sub(start).Milliseconds())
+		log.Printf("%s %q took %dms\n", r.Method, r.RequestURI, time.Since(start).Milliseconds())
 	})
 }
