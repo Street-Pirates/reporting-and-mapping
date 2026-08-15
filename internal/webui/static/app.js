@@ -455,8 +455,8 @@ async function reportExisting(near) {
   if (!canAddAtCurrentZoom()) return;
   clearCandidateMarkers();
   const body = near.kind === "location"
-    ? { lat: near.lat, lon: near.lon, to_exist: true, ...locationRef(near.item.location_id) }
-    : { lat: near.lat, lon: near.lon, to_exist: true };
+    ? { lat: near.lat, lon: near.lon, transpired: "seen", ...locationRef(near.item.location_id) }
+    : { lat: near.lat, lon: near.lon, transpired: "seen" };
   try {
     await api("POST", "/api/sightings", body);
     closeSheet();
@@ -503,10 +503,10 @@ function newSignForm(lngLat) {
     <button type="button" class="btn seen" id="submit">Report sighting</button>
     <button type="button" class="btn gone" id="removed">Report sighted and removed</button>
   `);
-  const buildBody = (toExist) => ({
+  const buildBody = (transpired) => ({
     lat: lngLat.lat,
     lon: lngLat.lng,
-    to_exist: toExist,
+    transpired: transpired,
     medium: document.getElementById("medium").value,
     message: document.getElementById("message").value,
     height: document.getElementById("height").value,
@@ -514,7 +514,7 @@ function newSignForm(lngLat) {
   document.getElementById("submit").onclick = async () => {
     if (!canAddAtCurrentZoom()) return;
     try {
-      await api("POST", "/api/sightings", buildBody(true));
+      await api("POST", "/api/sightings", buildBody("seen"));
       closeSheet();
       toast("Reported. Thanks!");
       refreshMap();
@@ -526,7 +526,7 @@ function newSignForm(lngLat) {
   document.getElementById("removed").onclick = async () => {
     if (!canAddAtCurrentZoom()) return;
     try {
-      await api("POST", "/api/sightings", buildBody(false));
+      await api("POST", "/api/sightings", buildBody("removed"));
       closeSheet();
       toast("Received! Thanks! A moderator may need to review it.");
       refreshMap();
@@ -617,14 +617,14 @@ async function relocate(lngLat) {
   const id = adjustFor;
   adjustFor = null;
   try {
-    await api("POST", "/api/sightings", {
-      lat: lngLat.lat, lon: lngLat.lng,
-      to_exist: true,
-      ...locationRef(id),
+    //await api("POST", "/api/sightings", {
+    //  lat: lngLat.lat, lon: lngLat.lng,
+    //  transpired: "seen",
+    //  ...locationRef(id),
 
-    });
-    toast("Location adjustment reported");
-    refreshMap();
+    //});
+    //toast("Location adjustment reported");
+    //refreshMap();
   } catch (err) {
     toast(err.message);
   }
