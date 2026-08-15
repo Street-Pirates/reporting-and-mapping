@@ -112,11 +112,14 @@ map.on("load", emphasizeRoads);
 // --- state -----------------------------------------------------------------
 let markers = [];
 let candidateMarkers = [];         // transient highlights for nearby-report choices
-let adjustFor = null;              // location id currently being relocated via next tap
 const locationCoords = {};         // id -> [lat,lon], so existence reports reuse coords
-let currentSelection = null;       // URL selection token for the open point: "l<id>" | "p<id>"
-let lastLocation = {};             // id -> latest location marker object (for reselect-from-URL)
-let lastProposed = {};             // id -> latest proposed sighting object (for reselect-from-URL)
+
+const uistate = {
+  adjustFor: null,                 // location id currently being relocated via next tap
+  currentSelection: null,          // URL selection token for the open point: "l<id>" | "p<id>"
+  lastLocation: {},                // id -> latest location marker object (for reselect-from-URL)
+  lastProposed: {},                // id -> latest proposed sighting object (for reselect-from-URL)
+};
 
 // Radius for the "any previous reportings near here?" check when proposing a
 // new report (metres). Kept small so the lookup bounding box stays tiny.
@@ -200,7 +203,7 @@ function syncURL() {
   q.set("days", String(currentDays()));
   q.set("gone", elShowMissingBox.checked ? "1" : "0");
   q.set("flagged", elInsincereBox.checked ? "1" : "0");
-  if (currentSelection) q.set("sel", currentSelection);
+  if (uistate.currentSelection) q.set("sel", uistate.currentSelection);
   history.replaceState(null, "", `${location.pathname}?${q.toString()}`);
 }
 
@@ -211,8 +214,8 @@ function applyInitialSelection() {
   if (!sel) return;
   const id = Number(sel.slice(1));
   if (!Number.isFinite(id)) return;
-  if (sel[0] === "l" && lastLocation[id]) locationSheet(lastLocation[id]);
-  else if (sel[0] === "p" && lastProposed[id]) proposedSheet(lastProposed[id]);
+  if (sel[0] === "l" && uistate.lastLocation[id]) locationSheet(uistate.lastLocation[id]);
+  else if (sel[0] === "p" && uistate.lastProposed[id]) proposedSheet(uistate.lastProposed[id]);
 }
 
 // --- tiny helpers ----------------------------------------------------------
@@ -248,7 +251,7 @@ function toast(msg) {
 }
 
 function openSheet(html) { elSheetBody.innerHTML = html; elSheet.classList.remove("hidden"); }
-function closeSheet() { elSheet.classList.add("hidden"); clearCandidateMarkers(); currentSelection = null; syncURL(); }
+function closeSheet() { elSheet.classList.add("hidden"); clearCandidateMarkers(); uistate.currentSelection = null; syncURL(); }
 function sheetOpen() { return !elSheet.classList.contains("hidden"); }
 document.querySelector(".sheet-close").addEventListener("click", closeSheet);
 
@@ -335,15 +338,15 @@ async function refreshMap() {
   }
 
   clearMarkers();
-  lastLocation = {};
-  lastProposed = {};
+  uistate.lastLocation = {};
+  uistate.lastProposed = {};
   (data.markers || []).forEach((m) => {
-    lastLocation[m.location_id] = m;
+    uistate.lastLocation[m.location_id] = m;
     locationCoords[m.location_id] = [m.lat, m.lon];
     addMarker(m.lon, m.lat, m.exists ? "exists" : "gone", () => locationSheet(m));
   });
   (data.proposed || []).forEach((p) => {
-    lastProposed[p.id] = p;
+    uistate.lastProposed[p.id] = p;
     addMarker(p.lon, p.lat, "proposed", () => proposedSheet(p));
   });
 
@@ -359,7 +362,7 @@ async function refreshMap() {
 // Tap empty map -> report a new sign (or place an adjustment).
 map.on("click", (e) => {
   if (!canAddAtCurrentZoom()) return;
-  if (adjustFor !== null) {
+  if (uistate.adjustFor !== null) {
     relocate(e.lngLat);
     return;
   }
@@ -561,7 +564,7 @@ function locationSheet(loc) {
   //  toast("Tap the map at the sign's correct location");
   //};
   document.getElementById("hist").onclick = () => showHistory(loc.location_id);
-  currentSelection = "l" + loc.location_id;
+  uistate.currentSelection = "l" + loc.location_id;
   syncURL();
 }
 
@@ -586,7 +589,7 @@ function proposedSheet(p) {
       toast(err.message);
     }
   };
-  currentSelection = "p" + p.id;
+  uistate.currentSelection = "p" + p.id;
   syncURL();
 }
 
@@ -617,8 +620,8 @@ async function reportOnExistingLocation(locationId, transpired) {
 // "Propose movement": append a continued_existence at the tapped point.
 async function relocate(lngLat) {
   if (!canAddAtCurrentZoom()) return;
-  const id = adjustFor;
-  adjustFor = null;
+  const id = uistate.adjustFor;
+  uistate.adjustFor = null;
   try {
     //await api("POST", "/api/sightings", {
     //  lat: lngLat.lat, lon: lngLat.lng,
