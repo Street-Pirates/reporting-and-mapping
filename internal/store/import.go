@@ -114,9 +114,9 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 		}
 
 		description := titleDescription.ReplaceAllString(rec.Description, "$1")
-		var image_url *string
+		var imageUrl *string
 		if m := imageMarkup.FindStringSubmatch(description); len(m) > 1 {
-			image_url = &m[1]
+			imageUrl = &m[1]
 			description = imageMarkup.ReplaceAllString(description, "$2")
 		}
 
@@ -131,7 +131,7 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 			FROM locations loc
 			WHERE lat BETWEEN $9-0.000045 AND $9+0.000045 AND lon BETWEEN $10-0.000045 AND $10+0.000045
 			LIMIT 1`,
-			importerUserID, observation_time, transpired, image_url, rec.Medium, rec.Message, description, rec.ExternalID,
+			importerUserID, observation_time, transpired, imageUrl, rec.Medium, rec.Message, description, rec.ExternalID,
 			rec.Lat, rec.Lon,
 		)
 		if err != nil {
