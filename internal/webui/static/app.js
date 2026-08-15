@@ -186,22 +186,19 @@ showMissingBox.addEventListener("change", () => { refreshMap(); syncURL(); });
 // replaceState (not push) so a pan/zoom/filter gesture never spams the Back
 // button, while the address bar stays bookmarkable at every moment.
 function syncURL() {
-  const lngLat = map.getCenter();
+  const center = map.getCenter();
   const q = new URLSearchParams();
-  q.set("z", map.getZoom().toFixed(2));
-  
-  if (lngLat.lat === undefined || lngLat.lng === undefined) {
-    lngLat.lat = 34.202804;
-    lngLat.lng = -84.003242;
-  }
+  const lat = Number.isFinite(center.lat) ? center.lat : 34.202804;
+  const lon = Number.isFinite(center.lng) ? center.lng : -84.003242;
 
-  q.set("lat", lngLat.lat.toFixed(6));
-  q.set("lon", lngLat.lng.toFixed(6));
+  q.set("z", map.getZoom().toFixed(2));
+  q.set("lat", lat.toFixed(6));
+  q.set("lon", lon.toFixed(6));
   q.set("days", String(currentDays()));
   q.set("gone", showMissingBox.checked ? "1" : "0");
   q.set("flagged", insincereBox.checked ? "1" : "0");
   if (currentSelection) q.set("sel", currentSelection);
-  history.replaceState(null, "", location.pathname + "?" + q.toString());
+  history.replaceState(null, "", `${location.pathname}?${q.toString()}`);
 }
 
 // Re-open the point named in ?sel= after the first data load. The restored
@@ -217,19 +214,26 @@ function applyInitialSelection() {
 
 // --- tiny helpers ----------------------------------------------------------
 async function api(method, path, body) {
-  const opts = { method, headers: {} };
+  const opts = {
+    method,
+    headers: {
+      Accept: "application/json",
+    },
+  };
+
   if (body !== undefined) {
     opts.headers["Content-Type"] = "application/json";
     opts.body = JSON.stringify(body);
   }
+
   const res = await fetch(path, opts);
-  let data = null;
-  try {
-    data = await res.json();
-  } catch (_) { }
+  const contentType = res.headers.get("content-type") || "";
+  const data = contentType.includes("application/json") ? await res.json().catch(() => null) : null;
+
   if (!res.ok) {
     throw new Error((data && data.error) || `${res.status} ${res.statusText}`);
   }
+
   return data;
 }
 
@@ -472,8 +476,7 @@ async function reportExisting(near) {
 function newSignForm(lngLat) {
   openSheet(`
     <h2>Report new</h2>
-    <p>${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)} &mdash; ${streetViewLink(lngLat.lat, lngLat.lng)}</p> 
-    </p>
+    <p>${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)} &mdash; ${streetViewLink(lngLat.lat, lngLat.lng)}</p>
     <label class="horizontal">Medium
       <select id="medium">
         <option value="unknown">unknown</option>
@@ -641,9 +644,10 @@ async function showHistory(id) {
     const rows = (h.reconciled || []).map((s) =>
       `<li>${s.to_exist ? "seen" : "gone"} — ${esc(s.observed_at)} <span style="color:#888">(${esc(s.author_opaque_id).slice(0, 8)})</span><br>${s.description}</li>`
     ).join("") || "<p>No reports in window.</p>";
+    const title = [h.location.message, h.location.medium].filter(Boolean).map(esc).join(" ") || "<i>unlabeled sign</i>";
     const near = (h.nearby_unrec || []).length;
     openSheet(`
-      <h2>${esc(h.location.message) || "<i>unlabeled sign</i>"} history</h2>
+      <h2>${title} history</h2>
       <ul>${rows}</ul>
       <p style="margin-top:8px;color:#888">${near} unreconciled report(s) within 100m</p>
     `);
