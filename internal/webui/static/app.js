@@ -192,8 +192,8 @@ function syncURL() {
   const lon = Number.isFinite(center.lng) ? center.lng : -84.003242;
 
   q.set("z", map.getZoom().toFixed(2));
-  q.set("lat", lat.toFixed(6));
-  q.set("lon", lon.toFixed(6));
+  q.set("lat", lat.toFixed(7)); // extra digit above 6 to preserve rounding, maybe?
+  q.set("lon", lon.toFixed(7)); // extra digit above 6 to preserve rounding, maybe?
   q.set("days", String(currentDays()));
   q.set("gone", showMissingBox.checked ? "1" : "0");
   q.set("flagged", insincereBox.checked ? "1" : "0");
@@ -476,7 +476,7 @@ async function reportExisting(near) {
 function newSignForm(lngLat) {
   openSheet(`
     <h2>Report new</h2>
-    <p>${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)} &mdash; ${streetViewLink(lngLat.lat, lngLat.lng)}</p>
+    <p>${lngLat.lat.toFixed(6)}, ${lngLat.lng.toFixed(6)} &mdash; ${streetViewLink(lngLat.lat, lngLat.lng)}</p>
     <label class="horizontal">Medium
       <select id="medium">
         <option value="unknown">unknown</option>
@@ -545,7 +545,7 @@ function locationSheet(loc) {
   openSheet(`
     <h2>${esc(loc.title)}</h2>
     <p>Currently ${status} · ${loc.sighting_count} report(s) in time window</p>
-    <p><tt>${Number(loc.lat).toFixed(5)}, ${Number(loc.lon).toFixed(5)}</tt>&emsp;${streetViewLink(loc.lat, loc.lon)}</p>
+    <p><tt>${Number(loc.lat).toFixed(6)}, ${Number(loc.lon).toFixed(6)}</tt>&emsp;${streetViewLink(loc.lat, loc.lon)}</p>
     <button class="btn seen"   id="still">Still exists</button>
     <button class="btn gone"   id="gone">Was no longer there</button>
     <button class="btn gone"   id="nixed">Found and removed</button>
