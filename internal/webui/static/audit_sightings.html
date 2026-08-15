@@ -268,11 +268,10 @@
         let changeText;
         let detailText = '';
         if (eventType === 'location_created') {
-          changeText = 'New location!';
+          changeText = 'New location added!';
           detailText = `location ${eventID}`;
         } else {
-          const toExist = item.to_exist === true || item.to_exist === 'true' || item.to_exist === 1;
-          changeText = toExist ? 'Observed present' : 'Observed missing';
+          changeText = "Item " + item.transpired;
           const detailParts = [];
           if (description) detailParts.push(description);
           if (locationHint) detailParts.push(locationHint);

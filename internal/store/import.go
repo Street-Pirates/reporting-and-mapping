@@ -126,8 +126,8 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO sightings
-			  (reporter_id, location_id, observed_at, transpired, image_url, medium, message, description, external_id)
-			SELECT $1, loc.id, $2, $3, $4, $5, $6, $7, $8
+			  (reporter_id, location_id, observed_at, transpired, to_exist, image_url, medium, message, description, external_id)
+			SELECT $1, loc.id, $2, $3, $3 == 'seen', $4, $5, $6, $7, $8
 			FROM locations loc
 			WHERE lat BETWEEN $9-0.000045 AND $9+0.000045 AND lon BETWEEN $10-0.000045 AND $10+0.000045
 			LIMIT 1`,

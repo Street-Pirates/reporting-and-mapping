@@ -2,7 +2,6 @@ package store
 
 import (
 	"context"
-	"database/sql"
 	"time"
 )
 
@@ -17,7 +16,7 @@ func (s *Store) AuditEventsSince(ctx context.Context, since time.Time) ([]AuditE
                l.lat AS lat,
                l.lon AS lon,
                l.created_at AS timestamp,
-               NULL AS to_exist,
+               NULL AS transpired,
                NULL AS description,
                NULL AS medium,
                NULL AS message,
@@ -34,7 +33,7 @@ func (s *Store) AuditEventsSince(ctx context.Context, since time.Time) ([]AuditE
                l.lat AS lat,
                l.lon AS lon,
                s.observed_at AS timestamp,
-               s.to_exist AS to_exist,
+               s.transpired AS transpired,
                s.description AS description,
                s.medium AS medium,
                s.message AS message,
@@ -54,13 +53,8 @@ func (s *Store) AuditEventsSince(ctx context.Context, since time.Time) ([]AuditE
 	var out []AuditEvent = []AuditEvent{}
 	for rows.Next() {
 		var ev AuditEvent
-		var toExist sql.NullInt64
-		if err := rows.Scan(&ev.EventType, &ev.EventID, &ev.AuthorOpaqueID, &ev.AuthorInsincerity, &ev.Lat, &ev.Lon, &ev.Timestamp, &toExist, &ev.Description, &ev.Medium, &ev.Message, &ev.Height, &ev.LocationID); err != nil {
+		if err := rows.Scan(&ev.EventType, &ev.EventID, &ev.AuthorOpaqueID, &ev.AuthorInsincerity, &ev.Lat, &ev.Lon, &ev.Timestamp, &ev.Transpired, &ev.Description, &ev.Medium, &ev.Message, &ev.Height, &ev.LocationID); err != nil {
 			return nil, err
-		}
-		if toExist.Valid {
-			t := toExist.Int64 != 0
-			ev.ToExist = &t
 		}
 		out = append(out, ev)
 	}

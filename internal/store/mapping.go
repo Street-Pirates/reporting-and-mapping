@@ -20,7 +20,7 @@ func (s *Store) MapData(ctx context.Context, since time.Time, includeInsincere, 
 		select id, lat, lon, created_by from locations where lat between $1 and $2 and lon between $3 and $4
 	)
 	select 
-		sightings.id sighting_id, to_exist = 1 as does_exist, max(observed_at) as observed_at, sightings.image_url, sightings.description, count(sightings.id),
+		sightings.id sighting_id, (transpired = 'seen' OR to_exist = 1) as does_exist, max(observed_at) as observed_at, sightings.image_url, sightings.description, count(sightings.id),
 		sightings.medium, sightings.message, sightings.height,
 		loc.id location_id, loc.lat lat, loc.lon lon 
 	from loc
@@ -28,7 +28,7 @@ func (s *Store) MapData(ctx context.Context, since time.Time, includeInsincere, 
 	where observed_at >= $5
 	and ($6 or coalesce((select sum(uf.value) from user_flags uf where uf.target_user_id = sightings.reporter_id and uf.flag_type = 'insincere'), 0) <= 0)
 	group by loc.id
-	having ($7 or (to_exist = 1))
+	having ($7 or (transpired = 'seen' or to_exist = 1))
 	order by observed_at desc, loc.id
 	`
 
