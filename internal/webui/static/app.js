@@ -139,19 +139,22 @@ function canAddAtCurrentZoom() {
 
 // --- time-back slider (logarithmic 7d .. 730d) -----------------------------
 const MIN_DAYS = 7, MAX_DAYS = 730;
-const slider = document.getElementById("timeslider");
-const timeLabel = document.getElementById("timelabel");
-const insincereBox = document.getElementById("insincere");
-const showMissingBox = document.getElementById("showmissing");
-const showMissingLabel = document.getElementById("showmissinglabel");
-const reportCountLabel = document.getElementById("reportcount");
+const elSlider = document.getElementById("timeslider");
+const elTimeLabel = document.getElementById("timelabel");
+const elInsincereBox = document.getElementById("insincere");
+const elShowMissingBox = document.getElementById("showmissing");
+const elShowMissingLabel = document.getElementById("showmissinglabel");
+const elReportCountLabel = document.getElementById("reportcount");
+const elToast = document.getElementById("toast");
+const elSheet = document.getElementById("sheet");
+const elSheetBody = document.getElementById("submitting");
 
 // The effective missing/gone state: the checkbox, gated by zoom. Read this rather
 // than showMissingBox.checked anywhere the map query is concerned.
-function wantMissing() { return showMissingBox.checked && map.getZoom() >= MISSING_MIN_ZOOM; }
+function wantMissing() { return elShowMissingBox.checked && map.getZoom() >= MISSING_MIN_ZOOM; }
 
 function syncMissingToggle() {
-  showMissingLabel.classList.toggle("hidden", map.getZoom() < MISSING_MIN_ZOOM);
+  elShowMissingLabel.classList.toggle("hidden", map.getZoom() < MISSING_MIN_ZOOM);
 }
 
 function sliderToDays(t) {
@@ -174,12 +177,12 @@ function fmtDays(d) {
   }
   return `${d} days`;
 }
-function currentDays() { return sliderToDays(Number(slider.value)); }
+function currentDays() { return sliderToDays(Number(elSlider.value)); }
 
-slider.addEventListener("input", () => { timeLabel.textContent = fmtDays(currentDays()); });
-slider.addEventListener("change", () => { refreshMap(); syncURL(); });
-insincereBox.addEventListener("change", () => { refreshMap(); syncURL(); });
-showMissingBox.addEventListener("change", () => { refreshMap(); syncURL(); });
+elSlider.addEventListener("input", () => { elTimeLabel.textContent = fmtDays(currentDays()); });
+elSlider.addEventListener("change", () => { refreshMap(); syncURL(); });
+elInsincereBox.addEventListener("change", () => { refreshMap(); syncURL(); });
+elShowMissingBox.addEventListener("change", () => { refreshMap(); syncURL(); });
 
 // --- URL sync --------------------------------------------------------------
 // Write the current view + time + toggles + selection to the query string.
@@ -195,8 +198,8 @@ function syncURL() {
   q.set("lat", lat.toFixed(7)); // extra digit above 6 to preserve rounding, maybe?
   q.set("lon", lon.toFixed(7)); // extra digit above 6 to preserve rounding, maybe?
   q.set("days", String(currentDays()));
-  q.set("gone", showMissingBox.checked ? "1" : "0");
-  q.set("flagged", insincereBox.checked ? "1" : "0");
+  q.set("gone", elShowMissingBox.checked ? "1" : "0");
+  q.set("flagged", elInsincereBox.checked ? "1" : "0");
   if (currentSelection) q.set("sel", currentSelection);
   history.replaceState(null, "", `${location.pathname}?${q.toString()}`);
 }
@@ -238,18 +241,15 @@ async function api(method, path, body) {
 }
 
 function toast(msg) {
-  const t = document.getElementById("toast");
-  t.textContent = msg;
-  t.classList.remove("hidden");
+  elToast.textContent = msg;
+  elToast.classList.remove("hidden");
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => t.classList.add("hidden"), 4000);
+  toast._t = setTimeout(() => elToast.classList.add("hidden"), 4000);
 }
 
-const sheet = document.getElementById("sheet");
-const sheetBody = document.getElementById("submitting");
-function openSheet(html) { sheetBody.innerHTML = html; sheet.classList.remove("hidden"); }
-function closeSheet() { sheet.classList.add("hidden"); clearCandidateMarkers(); currentSelection = null; syncURL(); }
-function sheetOpen() { return !sheet.classList.contains("hidden"); }
+function openSheet(html) { elSheetBody.innerHTML = html; elSheet.classList.remove("hidden"); }
+function closeSheet() { elSheet.classList.add("hidden"); clearCandidateMarkers(); currentSelection = null; syncURL(); }
+function sheetOpen() { return !elSheet.classList.contains("hidden"); }
 document.querySelector(".sheet-close").addEventListener("click", closeSheet);
 
 // Escape dismisses the open sheet, matching the close (×) button.
@@ -318,7 +318,7 @@ function viewportBBox() {
 
 async function refreshMap() {
   const params = new URLSearchParams({ days: String(currentDays()) });
-  if (insincereBox.checked) params.set("include_insincere", "1");
+  if (elInsincereBox.checked) params.set("include_insincere", "1");
   if (wantMissing()) params.set("include_gones", "1");
   const bb = viewportBBox();
   params.set("min_lon", String(bb.minLon));
@@ -351,7 +351,7 @@ async function refreshMap() {
   // location, plus the unreconciled proposals (one report each).
   const total = (data.markers || []).reduce((sum, m) => sum + (m.sighting_count || 0), 0)
     + (data.proposed || []).length;
-  reportCountLabel.textContent = `${total}`;
+  elReportCountLabel.textContent = `${total}`;
 }
 
 // --- interactions ----------------------------------------------------------
@@ -440,7 +440,7 @@ function nearbyChoiceSheet(lngLat, near) {
     ${rows}
     <button class="btn primary" id="newhere">No, actually where I clicked!</button>
   `);
-  sheetBody.querySelectorAll("button[data-i]").forEach((btn) => {
+  elSheetBody.querySelectorAll("button[data-i]").forEach((btn) => {
     btn.onclick = () => reportExisting(near[Number(btn.dataset.i)]);
   });
   document.getElementById("newhere").onclick = () => { clearCandidateMarkers(); newSignForm(lngLat); };
@@ -635,7 +635,7 @@ async function relocate(lngLat) {
 
 async function showHistory(id) {
   const params = new URLSearchParams({ days: String(currentDays()) });
-  if (insincereBox.checked) {
+  if (elInsincereBox.checked) {
     params.set("include_insincere", "1");
   }
 
@@ -660,10 +660,10 @@ async function showHistory(id) {
 async function boot() {
   // Restore time window + toggles from the URL before the first fetch, so the
   // initial /api/map query already reflects the bookmarked state.
-  if (Number.isFinite(initialURL.days)) slider.value = String(daysToSlider(initialURL.days));
-  if (initialURL.gone !== undefined) showMissingBox.checked = initialURL.gone;
-  if (initialURL.flagged !== undefined) insincereBox.checked = initialURL.flagged;
-  timeLabel.textContent = fmtDays(currentDays());
+  if (Number.isFinite(initialURL.days)) elSlider.value = String(daysToSlider(initialURL.days));
+  if (initialURL.gone !== undefined) elShowMissingBox.checked = initialURL.gone;
+  if (initialURL.flagged !== undefined) elInsincereBox.checked = initialURL.flagged;
+  elTimeLabel.textContent = fmtDays(currentDays());
   syncMissingToggle(); // a bookmarked low-zoom view starts with the ⭕ toggle hidden
 
   map.on("load", async () => {
