@@ -7,7 +7,7 @@
   --reveal: hsl(4, 70%, 59%);
   --remove: hsl(202, 100%, 25%);
   --proposed: hsl(40, 88%, 59%);
-  --panel: hsl(0, 0%, 92%);
+  --panel: hsla(0, 0%, 92%, 0.5);
   --radius: 14px;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
@@ -94,6 +94,7 @@ body {
   right: 12px;
   bottom: calc(12px + env(safe-area-inset-bottom));
   max-height: 55vh;
+  max-width: 30em;
   overflow-y: auto;
   background: var(--panel);
   backdrop-filter: blur(10px);
