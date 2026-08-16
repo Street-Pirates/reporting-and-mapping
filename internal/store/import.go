@@ -132,7 +132,13 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 			  (reporter_id, location_id, observed_at, transpired, to_exist, image_url, medium, message, description, external_id)
 			SELECT $1, loc.id, $2, $3, $3 == 'seen', $4, $5, $6, $7, $8
 			FROM locations loc
-			WHERE lat BETWEEN $9-0.000045 AND $9+0.000045 AND lon BETWEEN $10-0.000045 AND $10+0.000045
+			WHERE lat BETWEEN $9-0.000045 AND $9+0.000045
+			AND lon BETWEEN $10-0.000045 AND $10+0.000045
+			AND NOT EXISTS (SELECT 1 FROM sightings s
+				WHERE s.location_id=loc.id
+				AND loc.transpired=$3
+				AND loc.external_id=$8
+			)
 			LIMIT 1`,
 			importerUserID, recObservationTime, transpired, imageUrl, rec.Medium, rec.Message, description, rec.ExternalID,
 			rec.Lat, rec.Lon,
