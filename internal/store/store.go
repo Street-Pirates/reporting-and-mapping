@@ -102,11 +102,11 @@ func (s *Store) InsertCanonical(ctx context.Context, userID int64, lat, lon floa
 	return res.LastInsertId()
 }
 
-func (s *Store) getLocation(id int64) (Location, error) {
-	var c Location
+func (s *Store) getLocation(id int64) (Sighting, error) {
+	var c Sighting
 	err := s.db.QueryRow(
-		`SELECT id, lat, lon, created_at FROM locations WHERE id = ?`, id,
-	).Scan(&c.ID, &c.Lat, &c.Lon, &c.CreatedAt)
+		`SELECT locations.id, lat, lon, created_at, max(sightings.observed_at), sightings.message, sightings.medium, sightings.height FROM sightings left join locations on sightings.location_id = locations.id WHERE locations.id = ?`, id,
+	).Scan(&c.Location.ID, &c.Location.Lat, &c.Location.Lon, &c.Location.CreatedAt, &c.ObservedAt, &c.Message, &c.Medium, &c.Height)
 	if err == sql.ErrNoRows {
 		return c, ErrNotFound
 	}

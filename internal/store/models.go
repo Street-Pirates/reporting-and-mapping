@@ -37,8 +37,19 @@ func KnownRoles() []string {
 	return []string{"reporter", "editor", "administrator", "muted"}
 }
 
+// Location is a trusted, reconciled sign location.
+type Location struct {
+	ID          int64   `json:"location_id"`
+	Lat         float64 `json:"lat"`
+	Lon         float64 `json:"lon"`
+	ImageURL    *string `json:"image_url"`
+	Description string  `json:"location_description"`
+	CreatedAt   string  `json:"created_at"`
+}
+
 // Sighting is a raw, append-only observation.
 type Sighting struct {
+	Location
 	ID             int64   `json:"sighting_id"`
 	AuthorOpaqueID string  `json:"author_opaque_id"`
 	Lat            float64 `json:"lat"`
@@ -55,16 +66,6 @@ type Sighting struct {
 	DistanceM *float64 `json:"distance_m,omitempty"`
 }
 
-// Location is a trusted, reconciled sign location.
-type Location struct {
-	ID          int64   `json:"location_id"`
-	Lat         float64 `json:"lat"`
-	Lon         float64 `json:"lon"`
-	ImageURL    *string `json:"image_url"`
-	Description string  `json:"location_description"`
-	CreatedAt   string  `json:"created_at"`
-}
-
 // MapMarker is a canonical location decorated with its current derived status.
 type MapMarker struct {
 	Location
@@ -79,7 +80,7 @@ type MapMarker struct {
 }
 
 type LocationHistory struct {
-	Location    Location   `json:"location"`
+	Location    Sighting   `json:"location"`
 	Reconciled  []Sighting `json:"reconciled"`
 	NearbyUnrec []Sighting `json:"nearby_unrec"`
 }
