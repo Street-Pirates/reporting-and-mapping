@@ -1,0 +1,7 @@
+#!/usr/bin/env goreman --exit-on-stop -f
+
+mapserver: env DB_PATH="`pwd`/sightingmap.db" ADDR=":${PORT}" go run ./cmd/server
+
+oauth2proxy: oauth2-proxy --banner '<a href="/public-help">Pirate Map</a>' --custom-sign-in-logo=https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Flag_of_Edward_England.svg/960px-Flag_of_Edward_England.svg.png --footer - --cookie-secret=secret_for_demo~ --cookie-refresh=1h --show-debug-on-error --provider=google --client-id="${oauth_client_id?}" --client-secret="${oauth_client_secret?}" --email-domain=\* --skip-auth-route='/public-help' --upstream=http://localhost:$(( ${PORT?} - 100 ))/ --http-address=localhost:${PORT?}
+
+tailscale: tailscale funnel --https=443 localhost:$(( ${PORT?} - 100 ))
