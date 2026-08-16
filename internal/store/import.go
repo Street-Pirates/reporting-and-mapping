@@ -90,10 +90,12 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 	}
 	defer tx.Rollback() // no-op after an explicit Commit; also discards a dry run
 
-	observation_time := observedAt.UTC().Format(time.RFC3339)
-
 	for _, rec := range recs {
 		stats.Records++
+		recObservedAt := observedAt
+		if rec.When != nil && !rec.When.IsZero() {
+			recObservedAt = *rec.When
+		}
 		_, err := tx.ExecContext(ctx, `
 			INSERT INTO locations (lat, lon, created_by, created_at)
 			select $1, $2, $3, $4
@@ -124,6 +126,7 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 			//panic(description)
 		}
 
+		recObservationTime := recObservedAt.UTC().Format(time.RFC3339)
 		_, err = tx.ExecContext(ctx, `
 			INSERT INTO sightings
 			  (reporter_id, location_id, observed_at, transpired, to_exist, image_url, medium, message, description, external_id)
@@ -131,7 +134,7 @@ func (s *Store) ImportSourceRecords(ctx context.Context, importerUserID int64, s
 			FROM locations loc
 			WHERE lat BETWEEN $9-0.000045 AND $9+0.000045 AND lon BETWEEN $10-0.000045 AND $10+0.000045
 			LIMIT 1`,
-			importerUserID, observation_time, transpired, imageUrl, rec.Medium, rec.Message, description, rec.ExternalID,
+			importerUserID, recObservationTime, transpired, imageUrl, rec.Medium, rec.Message, description, rec.ExternalID,
 			rec.Lat, rec.Lon,
 		)
 		if err != nil {

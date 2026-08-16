@@ -59,8 +59,8 @@ const (
 	classUnknown = "unknown" // anything unrecognized -> skipped with a warning
 )
 
-// var htmlLineBreak = regexp.MustCompile(`(?i)<br\s*/?>`)
-var dateMmddyyMatcher = regexp.MustCompile(`([01][0-9]/[0123][0-9]/[0-9][0-9])`)
+var htmlLineBreak = regexp.MustCompile(`(?i)<br\s*/?>`)
+var dateMmddyyMatcher = regexp.MustCompile(`\b(?:0[1-9]|1[0-2])/(?:0[1-9]|[12][0-9]|3[01])/[0-9]{2}\b`)
 
 //var removedMatcher = regexp.MustCompile(`(?i)plunder|removed|gone`)
 
@@ -174,6 +174,7 @@ func buildRecords(doc kmlDoc, source string, defaultWhen time.Time) ([]store.Imp
 				continue
 			}
 			desc := pm.Description
+			when, _ := observationDateFromDescription(defaultWhen, desc)
 
 			recs = append(recs, store.ImportRecord{
 				ExternalID:  naturalID(source, pm.Name, lat, lon),
@@ -181,6 +182,7 @@ func buildRecords(doc kmlDoc, source string, defaultWhen time.Time) ([]store.Imp
 				Lon:         lon,
 				Name:        pm.Name,
 				Description: desc,
+				When:        &when,
 				Exists:      cls == classExists,
 				Message:     messageForFolder(folderName, desc),
 				Medium:      mediumForDescription(desc),
@@ -251,6 +253,30 @@ func mediumForDescription(description string) string {
 		return "sticker"
 	}
 	return "placard"
+}
+
+func observationDateFromDescription(defaultWhen time.Time, description string) (time.Time, bool) {
+	lines := htmlLineBreak.Split(description, -1)
+	for i := len(lines) - 1; i >= 0 && len(lines)-i <= 5; i-- {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+		matches := dateMmddyyMatcher.FindAllString(line, -1)
+		if len(matches) == 0 {
+			continue
+		}
+		candidate, err := time.Parse("01/02/06", matches[len(matches)-1])
+		if err != nil {
+			continue
+		}
+		candidate = time.Date(candidate.Year(), candidate.Month(), candidate.Day(), 4, 20, 0, 0, time.UTC)
+		if candidate.After(defaultWhen.UTC()) {
+			return candidate, true
+		}
+		return defaultWhen, false
+	}
+	return defaultWhen, false
 }
 
 // naturalID derives a stable per-record key. This KML export carries no

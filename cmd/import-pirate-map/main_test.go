@@ -143,7 +143,21 @@ func TestParseLonLat(t *testing.T) {
 		}
 	}
 }
+func TestObservationDateOverrideFromDescription(t *testing.T) {
+	defaultWhen := time.Date(2026, 6, 20, 22, 22, 0, 0, time.UTC)
+	got, ok := observationDateFromDescription(defaultWhen, "Jesus is coming<br>07/25/26<br>More text")
+	if !ok {
+		t.Fatal("observationDateFromDescription returned ok=false, want true")
+	}
+	want := time.Date(2026, 7, 25, 4, 20, 0, 0, time.UTC)
+	if !got.Equal(want) {
+		t.Fatalf("got %s, want %s", got.Format(time.RFC3339), want.Format(time.RFC3339))
+	}
 
+	if _, ok := observationDateFromDescription(defaultWhen, "Jesus is coming<br>06/01/26<br>More text"); ok {
+		t.Fatal("expected earlier date to be ignored")
+	}
+}
 // TestParseKMLShape verifies the struct tags decode a My-Maps-shaped document:
 // a default kml namespace, folders, and points with whitespace-wrapped coords.
 func TestParseKMLShape(t *testing.T) {
