@@ -148,13 +148,10 @@ opaque_id = base64url( HMAC-SHA256(key = seed, message = subject) )
 
 The seed is a random 256-bit key generated on first startup and kept in the
 `config` table under `user_id_hash_seed`. The derivation is deterministic, so a
-returning user resolves to their existing row, and non-reversible without the
-seed. See `internal/identity`.
+returning user resolves to their existing row, and non-reversible. See `internal/identity`.
 
 **Never change the seed.** Rotating it re-derives every `opaque_id` and orphans
-every existing user along with their sightings, flags and notes.
-
-The `audit` endpoints and gossip notes expose only opaque IDs.
+every existing user id from their sightings, flags, notes, and roles.
 
 ## Append-only model (mostly)
 
@@ -173,6 +170,10 @@ query time from the most recent relevant rows:
 
 The only mutable columns are `users.last_seen_at` (heartbeat) and `users.role`
 (administrative state) — neither is domain history.
+
+A change to a location sighting within a very brief time horizon from a previous
+change does not violate the spirit of the append-only model. People make mistakes,
+and we should let them undo if they do it right away.
 
 ## Map / tile provider — usage & cost
 
