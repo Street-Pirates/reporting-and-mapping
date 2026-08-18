@@ -60,7 +60,7 @@ div.editproperties select, div.editproperties input {
   font-size: 14px;
 }
 
-/* Time-back slider bar: bottom, full width, discreet. */
+/* Time-back slider bar: bottom, discreet. */
 #selection {
   left: 12px;
   right: 12px;
@@ -80,6 +80,7 @@ div.editproperties select, div.editproperties input {
 #timeslider {
   flex: 1;
   accent-color: var(--accent);
+  width: 96px;
 }
 
 #reportcount {
@@ -117,7 +118,7 @@ div.editproperties select, div.editproperties input {
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  transition: transform 0.18s ease, opacity 0.18s ease;
+  transition: transform 0.3s ease-out, opacity 0.3s ease-in;
 }
 
 .sheet.hidden {
@@ -254,7 +255,7 @@ h1.selected {
   border: 3px solid var(--accent);
   border-radius: 20px;
   font-size: 14px;
-  transition: opacity 0.2s;
+  transition: opacity 0.3s;
 }
 
 .toast.hidden {

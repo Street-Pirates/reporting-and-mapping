@@ -454,7 +454,7 @@ function nearbyChoiceSheet(lngLat, near) {
   openSheet(`
     <h2>Existing reports nearby</h2>
     <p>${near.length} report(s) within ${NEARBY_RADIUS_M} m of where you tapped.
-      Confirm one still exists, or add a new location.</p>
+      Recidivism is likely. Use an existing point?</p>
     ${rows}
     <button class="btn primary" id="newhere">No, actually where I clicked!</button>
   `);
