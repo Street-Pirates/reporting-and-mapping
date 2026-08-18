@@ -250,9 +250,20 @@ function toast(msg) {
   toast._t = setTimeout(() => elToast.classList.add("hidden"), 4000);
 }
 
-function openSheet(html) { elSheetBody.innerHTML = html; elSheet.classList.remove("hidden"); }
-function closeSheet() { elSheet.classList.add("hidden"); clearCandidateMarkers(); uistate.currentSelection = null; syncURL(); }
+function openSheet(html) {
+  elSheetBody.innerHTML = html;
+  elSheet.classList.remove("hidden");
+}
+
+function closeSheet() {
+  elSheet.classList.add("hidden");
+  clearCandidateMarkers();
+  uistate.currentSelection = null;
+  syncURL();
+}
+
 function sheetOpen() { return !elSheet.classList.contains("hidden"); }
+
 document.querySelector(".sheet-close").addEventListener("click", closeSheet);
 
 // Escape dismisses the open sheet, matching the close (×) button.
@@ -306,6 +317,11 @@ function showCandidateMarkers(near) {
     const node = el(`<div class="marker candidate"></div>`);
     candidateMarkers.push(new maplibregl.Marker({ element: node }).setLngLat([n.lon, n.lat]).addTo(map));
   });
+}
+function showCandidateMarker(lngLat) {
+  clearCandidateMarkers();
+  const node = el(`<div class="marker candidate proposed"></div>`);
+  candidateMarkers.push(new maplibregl.Marker({ element: node }).setLngLat([lngLat.lng, lngLat.lat]).addTo(map));
 }
 
 // Bounding box sent to the server: the current viewport expanded to 4x its
@@ -445,7 +461,9 @@ function nearbyChoiceSheet(lngLat, near) {
   elSheetBody.querySelectorAll("button[data-i]").forEach((btn) => {
     btn.onclick = () => reportExisting(near[Number(btn.dataset.i)]);
   });
-  document.getElementById("newhere").onclick = () => { clearCandidateMarkers(); newSignForm(lngLat); };
+  document.getElementById("newhere").onclick = () => {
+    clearCandidateMarkers();
+    newSignForm(lngLat); };
 }
 
 // locationRef spells the "which location is this about?" field for POST bodies.
@@ -510,6 +528,7 @@ function newSignForm(lngLat) {
     message: document.getElementById("message").value,
     height: document.getElementById("height").value,
   });
+  showCandidateMarker(lngLat);
   document.getElementById("submit").onclick = async () => {
     if (!canAddAtCurrentZoom()) return;
     try {
@@ -648,6 +667,7 @@ async function reportOnExistingLocation(locationId, transpired, medium, message,
       medium: medium, message: message, height: height,
       ...locationRef(locationId),
     });
+    clearCandidateMarkers();
     closeSheet();
     toast("Report submitted");
     refreshMap();

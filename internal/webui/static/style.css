@@ -4,6 +4,7 @@
   --muted: hsl(240, 6%, 65%);
   --accent: hsl(218, 100%, 65%);
   --pin: hsl(4, 70%, 59%);
+  --selected: hwb(182 22% 30% / 0.75);
   --reveal: hsl(4, 70%, 59%);
   --remove: hsl(202, 100%, 25%);
   --proposed: hsl(40, 88%, 59%);
@@ -232,8 +233,13 @@ div.editproperties select, div.editproperties input {
 /* Nearby existing reports offered as choices when proposing a new report. */
 .marker.candidate {
   background: transparent;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 4px rgba(76, 141, 255, 0.35);
+  border-color: var(--pin);
+  box-shadow: 0 0 0 4px var(--selected);
+}
+
+h1.selected {
+  color: var(--fg);
+  text-shadow: 0 0 4px var(--selected);
 }
 
 .toast {
@@ -380,10 +386,6 @@ div.editproperties select, div.editproperties input {
   align-items: center;
   gap: 8px;
   margin-left: 8px;
-}
-
-label.horizontal {
-  margin-right: 1em;
 }
 
 a.subtle {
