@@ -56,11 +56,26 @@ env DB_PATH="`pwd`/sightingmap.db" ADDR=":8080" DEV_SUBJECT="jane@example.com" g
 # open http://localhost:8080
 ```
 
-#### Demonstration
+#### Demonstration and Authn-/Authz-related development
 
-Set up an oauth client. Names do not matter here. You'll need the client id and client secret.
+```bash
+MAP_PORT=8080  # arbitrary
+OA2P_PORT=18080  # arbitrary
+
+# Ask tailscale to create TLS cert and connect port to a name on the public web.
+tailscale funnel --https=443 localhost:$OA2P_PORT
+```
+Tailscale CLI will print the public URL that you will use to reach the site.
+Take that URL and make the path `/oauth2/callback` , the oauth **redirect URL.**
+
+Set up an oauth client. Service names are at your discretion and you won't need
+them here again. You will need to save the **client id** and **client secret**.
 
 https://console.cloud.google.com/auth/clients
+
+In "Authorized redirect URIs", place your **redirect URL.**
+
+Then continue to start the server.
 
 ```bash
 MAP_PORT=8080  # arbitrary
@@ -73,11 +88,9 @@ oauth2-proxy --banner - --cookie-secret=secret_for_demo~ --cookie-refresh=1h --s
 oauth2-proxy --banner '<a href="/public-help">Pirate Map</a>' --custom-sign-in-logo=https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/Flag_of_Edward_England.svg/960px-Flag_of_Edward_England.svg.png --footer - --cookie-secret=secret_for_demo~ --cookie-refresh=1h --show-debug-on-error --provider=google --client-id="${oauth_client_id?}" --client-secret="${oauth_client_secret?}" --email-domain=\* --skip-auth-route='/public-help' --upstream=http://localhost:${MAP_PORT?}/ --http-address=localhost:${OA2P_PORT?}
 
 env DB_PATH="`pwd`/sightingmap.db" ADDR=":$MAP_PORT" go run ./cmd/server 
-
-# Ask tailscale to create TLS cert and connect port to a name on the public web.
-tailscale funnel --https=443 localhost:$OA2P_PORT
-# open the URL emitted 
 ```
+
+Open the URL that Tailscale CLI gave you above. (Not the whole redirect URL.)
 
 ### Configure roles of users
 
