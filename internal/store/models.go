@@ -40,6 +40,7 @@ func KnownRoles() []string {
 // Location is a trusted, reconciled sign location.
 type Location struct {
 	ID          int64   `json:"location_id"`
+	PlusCode    string  `json:"pluscode"`
 	Lat         float64 `json:"lat"`
 	Lon         float64 `json:"lon"`
 	ImageURL    *string `json:"image_url"`

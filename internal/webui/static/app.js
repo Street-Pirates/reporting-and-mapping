@@ -432,9 +432,8 @@ async function nearbyReports(lngLat) {
 function nearbyChoiceSheet(lngLat, near) {
   showCandidateMarkers(near);
   const rows = near.map((n, i) => {
-    const label = esc(n.item.title);
     const status = n.kind === "location" ? (n.item.exists ? "on map" : "gone") : "proposed";
-    return `<button class="btn" data-i="${i}">${label} · ${Math.round(n.d)} m away from yours · currently ${status}</button>`;
+    return `<button class="btn" data-i="${i}">${n.item.pluscode} / ${Number(n.item.lat).toFixed(6)},${Number(n.item.lon).toFixed(6)}<br>${Math.round(n.d)} m away from yours · currently ${status}</button>`;
   }).join("");
   openSheet(`
     <h2>Existing reports nearby</h2>
@@ -546,7 +545,7 @@ function newSignForm(lngLat) {
 function locationSheet(loc) {
   const status = loc.exists ? "on the map" : "reported gone";
   openSheet(`
-    <h2>${esc(loc.title)}</h2>
+    <h1>${loc.pluscode}</h1>
     <p>Currently ${status} · ${loc.sighting_count} report(s) in time window</p>
     <p><tt>${Number(loc.lat).toFixed(6)}, ${Number(loc.lon).toFixed(6)}</tt>&emsp;${streetViewLink(loc.lat, loc.lon)}</p>
     <button class="btn seen"   id="still">Still exists</button>

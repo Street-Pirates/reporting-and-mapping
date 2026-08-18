@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	olc "github.com/google/open-location-code/go"
 )
 
 // sightingSelect is the common column list + join used everywhere a Sighting is
@@ -26,6 +28,7 @@ func scanSightings(rows *sql.Rows) ([]Sighting, error) {
 		); err != nil {
 			return nil, err
 		}
+		s.Location.PlusCode = olc.Encode(s.Location.Lat, s.Location.Lon, 11)
 		out = append(out, s)
 	}
 	return out, rows.Err()

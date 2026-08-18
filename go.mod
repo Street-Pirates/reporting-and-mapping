@@ -2,7 +2,10 @@ module sightingmap
 
 go 1.26.5
 
-require modernc.org/sqlite v1.55.0
+require (
+	github.com/google/open-location-code/go v0.0.0-20250620134813-83986da0156b
+	modernc.org/sqlite v1.55.0
+)
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

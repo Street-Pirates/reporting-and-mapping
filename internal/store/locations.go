@@ -4,6 +4,8 @@ import (
 	"context"
 	"sightingmap/internal/geo"
 	"time"
+
+	olc "github.com/google/open-location-code/go"
 )
 
 func (s *Store) LocationHistory(ctx context.Context, locationID int64, since time.Time, includeInsincere bool) (*LocationHistory, error) {
@@ -50,6 +52,7 @@ func (s *Store) LocationHistory(ctx context.Context, locationID int64, since tim
 		if d <= ReconcileRadiusM {
 			dd := d
 			c.DistanceM = &dd
+			c.Location.PlusCode = olc.Encode(c.Location.Lat, c.Location.Lon, 11)
 			nearby = append(nearby, c)
 		}
 	}
