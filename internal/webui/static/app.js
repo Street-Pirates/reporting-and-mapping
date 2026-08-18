@@ -312,14 +312,12 @@ function clearCandidateMarkers() {
   candidateMarkers = [];
 }
 function showCandidateMarkers(near) {
-  clearCandidateMarkers();
   near.forEach((n) => {
     const node = el(`<div class="marker candidate"></div>`);
     candidateMarkers.push(new maplibregl.Marker({ element: node }).setLngLat([n.lon, n.lat]).addTo(map));
   });
 }
 function showCandidateMarker(lngLat) {
-  clearCandidateMarkers();
   const node = el(`<div class="marker candidate proposed"></div>`);
   candidateMarkers.push(new maplibregl.Marker({ element: node }).setLngLat([lngLat.lng, lngLat.lat]).addTo(map));
 }
@@ -446,22 +444,25 @@ async function nearbyReports(lngLat) {
 // nearbyChoiceSheet highlights the nearby points on the map and lets the user
 // confirm one (one tap) or continue to report a brand-new location.
 function nearbyChoiceSheet(lngLat, near) {
+  clearCandidateMarkers();
+  showCandidateMarker(lngLat);
   showCandidateMarkers(near);
   const rows = near.map((n, i) => {
     const status = n.kind === "location" ? (n.item.exists ? "on map" : "gone") : "proposed";
-    return `<button class="btn" data-i="${i}">${n.item.pluscode} / ${Number(n.item.lat).toFixed(6)},${Number(n.item.lon).toFixed(6)}<br>${Math.round(n.d)} m away from yours · currently ${status}</button>`;
+    return `<button class="btn" data-pluscode="${n.item.pluscode}" data-message="${n.item.message}" data-medium="${n.item.medium}" 
+    data-height="${n.item.height}" data-sighting_count="${n.item.sighting_count}" data-exists="${n.item.exists}" data-lon="${n.item.lon}" data-lat="${n.item.lat}" data-location_id="${n.item.location_id}" data-i="${i}">${n.item.pluscode} / ${Number(n.item.lat).toFixed(6)},${Number(n.item.lon).toFixed(6)}<br>${Math.round(n.d)} m away from yours · currently ${status}</button>`;
   }).join("");
   openSheet(`
     <h2>Existing reports nearby</h2>
     <p>${near.length} report(s) within ${NEARBY_RADIUS_M} m of where you tapped.
       Recidivism is likely. Use an existing point?</p>
     ${rows}
-    <button class="btn primary" id="newhere">No, actually where I clicked!</button>
+    <button class="btn primary" id="new-here">No, actually where I clicked!</button>
   `);
   elSheetBody.querySelectorAll("button[data-i]").forEach((btn) => {
-    btn.onclick = () => reportExisting(near[Number(btn.dataset.i)]);
+    btn.onclick = () => locationSheet(btn.dataset); // hacky!
   });
-  document.getElementById("newhere").onclick = () => {
+  document.getElementById("new-here").onclick = () => {
     clearCandidateMarkers();
     newSignForm(lngLat); };
 }
@@ -528,6 +529,7 @@ function newSignForm(lngLat) {
     message: document.getElementById("message").value,
     height: document.getElementById("height").value,
   });
+  clearCandidateMarkers();
   showCandidateMarker(lngLat);
   document.getElementById("submit").onclick = async () => {
     if (!canAddAtCurrentZoom()) return;
@@ -556,6 +558,7 @@ function newSignForm(lngLat) {
 }
 
 function locationSheet(loc) {
+  clearCandidateMarkers();
   const status = loc.exists ? "to be present" : "to be gone";
   openSheet(`
     <h1 class="selected">${loc.pluscode}</h1>
@@ -588,6 +591,7 @@ function locationSheet(loc) {
     <!-- button disabled=disabled class="btn"        id="adjust">Propose movement</button-->
     <button class="btn"        id="hist">View history</button>
   `);
+  clearCandidateMarkers();
   showCandidateMarker({"lng": loc.lon, "lat": loc.lat});
   document.getElementById("still").onclick = () => reportOnExistingLocation(loc.location_id, "seen", document.getElementById("medium").value, document.getElementById("message").value, document.getElementById("height").value);
   if (loc.exists) {
