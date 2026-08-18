@@ -26,6 +26,21 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+select, input {
+  background-color: var(--bg);
+  border-style: solid;
+  border-width: 1px;
+  border-color: gray;
+}
+
+div.editproperties {
+  font-size: larger;
+}
+
+div.editproperties select, div.editproperties input {
+  font-size: large;
+}
+
 /* Full-screen map. */
 #map {
   position: absolute;

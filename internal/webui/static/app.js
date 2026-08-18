@@ -477,9 +477,10 @@ async function reportExisting(near) {
 // newSignForm is the original "report a brand-new location here" form.
 function newSignForm(lngLat) {
   openSheet(`
-    <h2>Report new</h2>
     <p>${lngLat.lat.toFixed(6)}, ${lngLat.lng.toFixed(6)} &mdash; ${streetViewLink(lngLat.lat, lngLat.lng)}</p>
-    <label class="horizontal">Medium
+    <div class="editproperties">
+    <label class="horizontal"><input id="message" list="sign-messages" name="message" size="10" placeholder="message"></label>
+    <label class="horizontal">
       <select id="medium">
         <option value="unknown">unknown</option>
         <option value="placard">placard</option>
@@ -487,16 +488,7 @@ function newSignForm(lngLat) {
         <option value="sticker">sticker</option>
       </select>
     </label>
-    <label class="horizontal">Message
-      <select id="message">
-        <option value="unknown">unknown</option>
-        <option value="js">js</option>
-        <option value="jicr">jicr</option>
-        <option value="bij">bij</option>
-        <option value="other">other</option>
-      </select>
-    </label>
-    <label class="horizontal">Approx height
+    <label class="horizontal">at
       <select id="height">
         <option value="unknown">unknown</option>
         <option value="reachable">reachable</option>
@@ -504,7 +496,9 @@ function newSignForm(lngLat) {
         <option value="10ft">10ft</option>
         <option value="15+ft">15+ft</option>
       </select>
+      height
     </label>
+    </div>
     <button type="button" class="btn seen" id="submit">Report sighting</button>
     <button type="button" class="btn gone" id="removed">Report sighted and removed</button>
   `);
@@ -543,20 +537,44 @@ function newSignForm(lngLat) {
 }
 
 function locationSheet(loc) {
-  const status = loc.exists ? "on the map" : "reported gone";
+  const status = loc.exists ? "to be present" : "to be gone";
   openSheet(`
-    <h1>${loc.pluscode}</h1>
-    <p>Currently ${status} · ${loc.sighting_count} report(s) in time window</p>
+    <h1 class="selected">${loc.pluscode}</h1>
+    <div class="editproperties">
+    <label class="horizontal"><input id="message" list="sign-messages" name="message" size="10" value="${loc.message}"></label>
+    <label class="horizontal">
+      <select id="medium">
+        <option value="unknown" ${loc.medium=="known" ? "selected" : ""}>unknown</option>
+        <option value="placard" ${loc.medium=="placard" ? "selected" : ""}>placard</option>
+        <option value="ink" ${loc.medium=="ink" ? "selected" : ""}>ink</option>
+        <option value="sticker" ${loc.medium=="sticker" ? "selected" : ""}>sticker</option>
+      </select>
+    </label>
+    <label class="horizontal">at
+      <select id="height">
+        <option value="unknown" ${loc.height=="unknown" ? "selected" : ""}>unknown</option>
+        <option value="reachable" ${loc.height=="reachable" ? "selected" : ""}>reachable</option>
+        <option value="7ft" ${loc.height=="7ft" ? "selected" : ""}>7ft</option>
+        <option value="10ft" ${loc.height=="10ft" ? "selected" : ""}>10ft</option>
+        <option value="15+ft" ${loc.height=="15+ft" ? "selected" : ""}>15+ft</option>
+      </select>
+      height
+    </label>
+    </div>
+    <p>Currently reported ${status} · ${loc.sighting_count} report(s) in time window</p>
     <p><tt>${Number(loc.lat).toFixed(6)}, ${Number(loc.lon).toFixed(6)}</tt>&emsp;${streetViewLink(loc.lat, loc.lon)}</p>
-    <button class="btn seen"   id="still">Still exists</button>
-    <button class="btn gone"   id="gone">Was no longer there</button>
-    <button class="btn gone"   id="nixed">Found and removed</button>
+    <button class="btn seen"   id="still">${loc.exists ? "Sign still remains" : "Sign discovered and it remains"}</button>
+    ${loc.exists ? "<button class=\"btn gone\"   id=\"gone\">Sign was no longer there</button>" : ""}
+    <button class="btn gone"   id="nixed">Sign found and removed</button>
     <!-- button disabled=disabled class="btn"        id="adjust">Propose movement</button-->
     <button class="btn"        id="hist">View history</button>
   `);
-  document.getElementById("still").onclick = () => reportOnExistingLocation(loc.location_id, "seen");
-  document.getElementById("gone").onclick = () => reportOnExistingLocation(loc.location_id, "missed");
-  document.getElementById("nixed").onclick = () => reportOnExistingLocation(loc.location_id, "removed");
+  showCandidateMarker({"lng": loc.lon, "lat": loc.lat});
+  document.getElementById("still").onclick = () => reportOnExistingLocation(loc.location_id, "seen", document.getElementById("medium").value, document.getElementById("message").value, document.getElementById("height").value);
+  if (loc.exists) {
+    document.getElementById("gone").onclick = () => reportOnExistingLocation(loc.location_id, "missed", undefined, undefined, undefined);
+  }
+  document.getElementById("nixed").onclick = () => reportOnExistingLocation(loc.location_id, "removed", document.getElementById("medium").value, document.getElementById("message").value, document.getElementById("height").value);
   //document.getElementById("adjust").onclick = () => {
   //  if (!canAddAtCurrentZoom()) return;
   //  adjustFor = loc.location_id; closeSheet();
@@ -569,7 +587,28 @@ function locationSheet(loc) {
 
 function proposedSheet(p) {
   openSheet(`
-    <h2>Proposed sign ${streetViewLink(p.lat, p.lon)}</h2>
+    <div class="editproperties">
+    <label class="horizontal"><input id="message" list="sign-messages" name="message" size="10" placeholder="message" placeholder="message" value="${p.message}"></label>
+    <label class="horizontal">
+      <select id="medium">
+        <option value="unknown" ${p.medium=="known" ? "selected" : ""}>unknown</option>
+        <option value="placard" ${p.medium=="placard" ? "selected" : ""}>placard</option>
+        <option value="ink" ${p.medium=="ink" ? "selected" : ""}>ink</option>
+        <option value="sticker" ${p.medium=="sticker" ? "selected" : ""}>sticker</option>
+      </select>
+    </label>
+    <label class="horizontal">at
+      <select id="height">
+        <option value="unknown" ${p.height=="unknown" ? "selected" : ""}>unknown</option>
+        <option value="reachable" ${p.height=="reachable" ? "selected" : ""}>reachable</option>
+        <option value="7ft" ${p.height=="7ft" ? "selected" : ""}>7ft</option>
+        <option value="10ft" ${p.height=="10ft" ? "selected" : ""}>10ft</option>
+        <option value="15+ft" ${p.height=="15+ft" ? "selected" : ""}>15+ft</option>
+      </select>
+      height
+    </label>
+    </div>
+    <p>${streetViewLink(p.lat, p.lon)}</p>
     <p>${esc(p.location_description) || "(no description)"}</p>
     <p>Reported ${esc(p.observed_at)}</p>
     <button class="btn primary" id="promote">Confirm &amp; add to map</button>
@@ -594,7 +633,7 @@ function proposedSheet(p) {
 
 // continued_existence / non_existence report against a location,
 // reusing the location's own coordinates.
-async function reportOnExistingLocation(locationId, transpired) {
+async function reportOnExistingLocation(locationId, transpired, medium, message, height) {
   const coords = locationCoords[locationId];
   if (coords === undefined) {
     console.error("Could not look up cached location of loc", locationId);
@@ -606,6 +645,7 @@ async function reportOnExistingLocation(locationId, transpired) {
     await api("POST", "/api/sightings", {
       lat: coords[0], lon: coords[1],
       transpired: transpired,
+      medium: medium, message: message, height: height,
       ...locationRef(locationId),
     });
     closeSheet();

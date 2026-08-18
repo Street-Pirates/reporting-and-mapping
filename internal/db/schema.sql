@@ -160,3 +160,13 @@ CREATE TABLE IF NOT EXISTS reputation_notes (
 ) STRICT;
 
 CREATE INDEX IF NOT EXISTS idx_notes_target ON reputation_notes(target_user_id);
+
+CREATE TABLE IF NOT EXISTS frequent_messages (
+  abbr TEXT PRIMARY KEY
+) STRICT;
+INSERT INTO frequent_messages (abbr) values
+  ('jicr'),
+  ('js'),
+  ('j+'),
+  ('play'),
+  ('verse') ON CONFLICT DO NOTHING;

@@ -63,16 +63,16 @@ func (s *Server) handleCreateSighting(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusBadRequest, "lat/lon out of range")
 		return
 	}
-	if body.Medium == "" {
+	if body.Medium == "" && body.Transpired != "missed" {
 		body.Medium = "unknown"
 	}
 	switch body.Medium {
-	case "unknown", "placard", "ink", "sticker":
+	case "unknown", "placard", "ink", "sticker", "":
 	default:
 		writeErr(w, http.StatusBadRequest, "invalid medium")
 		return
 	}
-	if body.Message == "" {
+	if body.Message == "" && body.Transpired != "missed" {
 		body.Message = "unknown"
 	}
 	switch body.Transpired {
@@ -82,16 +82,16 @@ func (s *Server) handleCreateSighting(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch body.Message {
-	case "unknown", "js", "jicr", "bij", "other":
+	case "unknown", "js", "jicr", "bij", "other", "":
 	default:
 		writeErr(w, http.StatusBadRequest, "invalid message")
 		return
 	}
-	if body.Height == "" {
+	if body.Height == "" && body.Transpired != "missed" {
 		body.Height = "unknown"
 	}
 	switch body.Height {
-	case "unknown", "reachable", "7ft", "10ft", "15+ft":
+	case "unknown", "reachable", "7ft", "10ft", "15+ft", "":
 	default:
 		writeErr(w, http.StatusBadRequest, "invalid height")
 		return
