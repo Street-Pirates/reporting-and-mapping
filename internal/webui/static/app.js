@@ -471,7 +471,7 @@ function nearbyChoiceSheet(lngLat, near) {
 // The Go side renamed its structs to Location/LocationID but kept the old JSON
 // tag (`location_id`) on /api/sightings and /api/reconciliations, so
 // the wire name lives in exactly one place here, ready to flip when it changes.
-function locationRef(id) { return { location_id: id }; }
+function locationRef(id) { return { location_id: Number(id) }; }
 
 // reportExisting files a one-tap "still exists" against a chosen nearby point:
 // continued_existence on a location (reusing its coords), or a fresh
