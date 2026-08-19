@@ -56,8 +56,8 @@ func (s *Store) InsertSighting(ctx context.Context, in SightingInput) (int64, er
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO locations
 		(created_by, lat, lon, created_at)
-		select $1, $2, $3, $4 where not exists
-		(select 1 from locations where lat=$2 and lon=$3)`, in.UserID, in.Lat, in.Lon, in.ObservedAt.UTC().Format(time.RFC3339))
+		select $1, round($2, 7), round($3, 7), $4 where not exists
+		(select 1 from locations where round(lat, 6)=round($2, 6) and round(lon, 6)=round($3, 6))`, in.UserID, in.Lat, in.Lon, in.ObservedAt.UTC().Format(time.RFC3339))
 	if err != nil {
 		return 0, err
 	}
@@ -75,7 +75,7 @@ func (s *Store) InsertSighting(ctx context.Context, in SightingInput) (int64, er
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO sightings
 		(reporter_id, observed_at, to_exist, transpired, medium, message, height, description, location_id)
-		SELECT $1, $2, case when $3 then 1 else 0 end, $4, $5, $6, $7, $8, locations.id FROM locations WHERE lat=$9 AND lon=$10 LIMIT 1`,
+		SELECT $1, $2, case when $3 then 1 else 0 end, $4, $5, $6, $7, $8, locations.id FROM locations WHERE round(lat, 6)=round($9, 6) AND round(lon, 6)=round($10, 6) LIMIT 1`,
 		in.UserID, in.ObservedAt.UTC().Format(time.RFC3339), toExist, in.Transpired,
 		in.Medium, in.Message, in.Height, in.Description,
 		in.Lat, in.Lon,
