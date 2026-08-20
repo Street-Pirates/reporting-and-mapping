@@ -279,7 +279,6 @@ h1.selected {
 }
 
 .audit-page .left {
-  width: 42%;
   min-width: 340px;
   border-right: 1px solid #ddd;
   overflow: auto;

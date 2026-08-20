@@ -244,7 +244,7 @@
       countSpan.textContent = items.length + ' results';
       const tbl = document.createElement('table');
       const thead = document.createElement('thead');
-      thead.innerHTML = '<tr><th>Reporter</th><th>Change</th><th>When</th><th>Age</th></tr>';
+      thead.innerHTML = '<tr><th>Reporter</th><th>Change</th><th>Age</th></tr>';
       tbl.appendChild(thead);
       const tbody = document.createElement('tbody');
       const bounds = new maplibregl.LngLatBounds();
@@ -304,12 +304,11 @@
         secondary.textContent = latlonText;
         changeTd.append(main, secondary);
 
-        const whenTd = document.createElement('td');
-        whenTd.textContent = when;
         const ageTd = document.createElement('td');
         ageTd.textContent = age;
+        ageTd.title = when;
 
-        tr.append(reporterTd, changeTd, whenTd, ageTd);
+        tr.append(reporterTd, changeTd, ageTd);
         tbody.appendChild(tr);
         rows.set(key, tr);
 
