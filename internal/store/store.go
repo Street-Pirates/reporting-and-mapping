@@ -64,7 +64,7 @@ func (s *Store) InsertSighting(ctx context.Context, in SightingInput) (int64, er
 
 	var toExist int
 	switch in.Transpired {
-	case "seen":
+	case "sighted":
 		toExist = 1
 	case "missed", "removed":
 		toExist = 0

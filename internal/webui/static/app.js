@@ -480,8 +480,8 @@ async function reportExisting(near) {
   if (!canAddAtCurrentZoom()) return;
   clearCandidateMarkers();
   const body = near.kind === "location"
-    ? { lat: near.lat, lon: near.lon, transpired: "seen", ...locationRef(near.item.location_id) }
-    : { lat: near.lat, lon: near.lon, transpired: "seen" };
+    ? { lat: near.lat, lon: near.lon, transpired: "sighted", ...locationRef(near.item.location_id) }
+    : { lat: near.lat, lon: near.lon, transpired: "sighted" };
   try {
     await api("POST", "/api/sightings", body);
     closeSheet();
@@ -518,7 +518,7 @@ function newSignForm(lngLat) {
       height
     </label>
     </div>
-    <button type="button" class="btn seen" id="submit">Report sighting</button>
+    <button type="button" class="btn sighted" id="submit">Report sighting</button>
     <button type="button" class="btn gone" id="removed">Report sighted and removed</button>
   `);
   const buildBody = (transpired) => ({
@@ -534,7 +534,7 @@ function newSignForm(lngLat) {
   document.getElementById("submit").onclick = async () => {
     if (!canAddAtCurrentZoom()) return;
     try {
-      await api("POST", "/api/sightings", buildBody("seen"));
+      await api("POST", "/api/sightings", buildBody("sighted"));
       closeSheet();
       toast("Reported. Thanks!");
       refreshMap();
@@ -585,7 +585,7 @@ function locationSheet(loc) {
     </div>
     <p>Currently reported ${status} · ${loc.sighting_count} report(s) in time window</p>
     <p><tt>${Number(loc.lat).toFixed(6)}, ${Number(loc.lon).toFixed(6)}</tt>&emsp;${streetViewLink(loc.lat, loc.lon)}</p>
-    <button class="btn seen"   id="still">${loc.exists ? "Sign still remains" : "Sign discovered and it remains"}</button>
+    <button class="btn sighted"   id="still">${loc.exists ? "Sign still remains" : "Sign discovered and it remains"}</button>
     ${loc.exists ? "<button class=\"btn gone\"   id=\"gone\">Sign was no longer there</button>" : ""}
     <button class="btn gone"   id="nixed">Sign found and removed</button>
     <!-- button disabled=disabled class="btn"        id="adjust">Propose movement</button-->
@@ -593,7 +593,7 @@ function locationSheet(loc) {
   `);
   clearCandidateMarkers();
   showCandidateMarker({"lng": loc.lon, "lat": loc.lat});
-  document.getElementById("still").onclick = () => reportOnExistingLocation(loc.location_id, "seen", document.getElementById("medium").value, document.getElementById("message").value, document.getElementById("height").value);
+  document.getElementById("still").onclick = () => reportOnExistingLocation(loc.location_id, "sighted", document.getElementById("medium").value, document.getElementById("message").value, document.getElementById("height").value);
   if (loc.exists) {
     document.getElementById("gone").onclick = () => reportOnExistingLocation(loc.location_id, "missed", undefined, undefined, undefined);
   }
@@ -688,7 +688,7 @@ async function relocate(lngLat) {
   try {
     //await api("POST", "/api/sightings", {
     //  lat: lngLat.lat, lon: lngLat.lng,
-    //  transpired: "seen",
+    //  transpired: "sighted",
     //  ...locationRef(id),
 
     //});
@@ -708,7 +708,7 @@ async function showHistory(id) {
   try {
     const h = await api("GET", `/api/locations/${id}/history?${params}`);
     const rows = (h.reconciled || []).map((s) =>
-      `<li>${s.to_exist ? "seen" : "gone"} — ${esc(s.observed_at)} <span style="color:#888">(${esc(s.author_opaque_id).slice(0, 8)})</span><br>${s.description}</li>`
+      `<li>${s.to_exist ? "sighted" : "gone"} — ${esc(s.observed_at)} <span style="color:#888">(${esc(s.author_opaque_id).slice(0, 8)})</span><br>${s.description}</li>`
     ).join("") || "<p>No reports in window.</p>";
     const title = [h.location.message, h.location.medium].filter(Boolean).map(esc).join(" ") || "<i>unlabeled sign</i>";
     const near = (h.nearby_unrec || []).length;

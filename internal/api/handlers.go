@@ -76,9 +76,9 @@ func (s *Server) handleCreateSighting(w http.ResponseWriter, r *http.Request) {
 		body.Message = "unknown"
 	}
 	switch body.Transpired {
-	case "seen", "missed", "removed":
+	case "sighted", "missed", "removed":
 	default:
-		writeErr(w, http.StatusBadRequest, "invalid transpired event, expecting seen, missed, or removed")
+		writeErr(w, http.StatusBadRequest, "invalid transpired event, expecting sighted, missed, or removed")
 		return
 	}
 	switch body.Message {
