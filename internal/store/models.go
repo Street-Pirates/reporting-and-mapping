@@ -94,6 +94,7 @@ type AuditEvent struct {
 	AuthorInsincerity int     `json:"author_insincerity"`
 	Lat               float64 `json:"lat"`
 	Lon               float64 `json:"lon"`
+	PlusCode          string  `json:"plus_code"`
 	Timestamp         string  `json:"timestamp"`
 	ToExist           *bool   `json:"to_exist,omitempty"`
 	Transpired        *string `json:"transpired"`

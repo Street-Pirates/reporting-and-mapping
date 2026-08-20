@@ -3,6 +3,8 @@ package store
 import (
 	"context"
 	"time"
+
+	"sightingmap/internal/geo"
 )
 
 // AuditEventsSince returns interleaved sightings and location creation events.
@@ -56,6 +58,7 @@ func (s *Store) AuditEventsSince(ctx context.Context, since time.Time) ([]AuditE
 		if err := rows.Scan(&ev.EventType, &ev.EventID, &ev.AuthorOpaqueID, &ev.AuthorInsincerity, &ev.Lat, &ev.Lon, &ev.Timestamp, &ev.Transpired, &ev.Description, &ev.Medium, &ev.Message, &ev.Height, &ev.LocationID); err != nil {
 			return nil, err
 		}
+		ev.PlusCode = geo.GetPlusCode(ev.Lat, ev.Lon)
 		out = append(out, ev)
 	}
 	if err := rows.Err(); err != nil {

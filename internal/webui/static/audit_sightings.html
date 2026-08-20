@@ -267,15 +267,14 @@
         const latlonText = haveCoords ? `lat ${Number(lat).toFixed(5)}, lon ${Number(lon).toFixed(5)}` : '';
         let changeText;
         let detailText = '';
+          detailText = item.plus_code;
         if (eventType === 'location_created') {
           changeText = 'New location added!';
-          detailText = `location ${eventID}`;
         } else {
           changeText = "Item " + item.transpired;
           const detailParts = [];
           if (description) detailParts.push(description);
           if (locationHint) detailParts.push(locationHint);
-          detailText = detailParts.join(' · ');
         }
 
         const tr = document.createElement('tr');

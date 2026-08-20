@@ -2,7 +2,11 @@
 // location reconciliation radius.
 package geo
 
-import "math"
+import (
+	"math"
+
+	olc "github.com/google/open-location-code/go"
+)
 
 const earthRadiusM = 6371000.0 // mean Earth radius in metres
 
@@ -41,4 +45,8 @@ func BoundingBox(lat, lon, radiusM float64) BBox {
 		MinLat: lat - dLat, MaxLat: lat + dLat,
 		MinLon: lon - dLon, MaxLon: lon + dLon,
 	}
+}
+
+func GetPlusCode(lat float64, lon float64) string {
+	return olc.Encode(lat, lon, 11)
 }

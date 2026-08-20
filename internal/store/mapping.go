@@ -2,10 +2,9 @@ package store
 
 import (
 	"context"
-	"sightingmap/internal/geo"
 	"time"
 
-	olc "github.com/google/open-location-code/go"
+	"sightingmap/internal/geo"
 )
 
 // MapData returns canonical markers (with derived current status) plus
@@ -48,7 +47,7 @@ func (s *Store) MapData(ctx context.Context, since time.Time, includeInsincere, 
 		}
 		m.Title = titleFromSignTraits(m.Message, m.Medium, m.Height)
 
-		m.Location.PlusCode = olc.Encode(m.Location.Lat, m.Location.Lon, 11)
+		m.Location.PlusCode = geo.GetPlusCode(m.Location.Lat, m.Location.Lon)
 
 		out.Markers = append(out.Markers, m)
 	}
